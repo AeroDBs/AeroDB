@@ -331,23 +331,29 @@ mod tests {
     use super::super::operations::InMemoryExecutor;
     use tempfile::TempDir;
     use std::fs;
+    use std::path::Path; // Added for Path type
+    use chrono; // Added for chrono::Utc
+    use serde_json; // Added for serde_json::json!
+    use serde_yaml; // Added for serde_yaml::to_string
 
     fn create_test_migration(dir: &Path, version: u64, name: &str) {
-        let content = format!(
-            r#"version: {}
-checksum: ""
-timestamp: "2026-02-08T00:00:00Z"
-up:
-  - create_collection:
-      name: {}
-      schema: {{}}
-down:
-  - drop_collection:
-      name: {}
-"#,
-            version, name, name
-        );
-
+        // Use serde to generate properly formatted YAML
+        let migration = Migration {
+            version,
+            name: name.to_string(),
+            checksum: "".to_string(),
+            timestamp: chrono::Utc::now(),
+            file_path: None,
+            up: vec![MigrationOperation::CreateCollection {
+                name: name.to_string(),
+                schema: serde_json::json!({}),
+            }],
+            down: vec![MigrationOperation::DropCollection {
+                name: name.to_string(),
+            }],
+        };
+        
+        let content = serde_yaml::to_string(&migration).unwrap();
         let filename = format!("{:03}_{}.yaml", version, name);
         fs::write(dir.join(&filename), &content).unwrap();
     }
