@@ -1,10 +1,33 @@
 //! Backup and restore functionality for AeroDB.
+//!
+//! This module provides:
+//! - BackupManager: Create, list, delete backups with retention policy
+//! - BackupScheduler: Timing logic for automatic backups
+//! - Error types: Structured backup error handling
+//!
+//! # Backup Format
+//!
+//! Backups are tar archives containing:
+//! - `backup_manifest.json` - Backup metadata
+//! - `snapshot/` - Database snapshot files
+//! - `wal/` - Write-ahead log files
+//!
+//! This format is compatible with RestoreManager for restoration.
+
+pub mod errors;
+pub mod manager;
+pub mod scheduler;
 
 use std::fs::File;
 use std::io::{Read, Result as IoResult};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+
+pub use errors::{BackupError, BackupErrorCode, BackupResult, Severity};
+pub use manager::BackupManager;
+pub use scheduler::BackupScheduler;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BackupConfig {
     /// Enable automatic backups
@@ -74,7 +97,6 @@ pub struct BackupMetadata {
 mod tests {
     use super::*;
     use tempfile::NamedTempFile;
-    use std::io::Write;
 
     #[test]
     fn test_backup_config_defaults() {
@@ -103,3 +125,4 @@ mod tests {
         assert_eq!(loaded.format_version, 1);
     }
 }
+
