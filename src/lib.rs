@@ -7,6 +7,7 @@ pub mod auth;
 pub mod backup;
 pub mod checkpoint;
 pub mod cli;
+pub mod control_plane;
 pub mod core;
 pub mod crash_point;
 pub mod dx;

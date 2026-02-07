@@ -16,6 +16,7 @@ use super::auth_routes::{auth_routes, AuthState};
 use super::backup_routes::{backup_routes, BackupState};
 use super::cluster_routes::{cluster_routes, ClusterState};
 use super::config::HttpServerConfig;
+use super::control_plane_routes::{control_plane_routes, ControlPlaneState};
 use super::database_routes::{database_routes, DatabaseState};
 use super::functions_routes::{functions_routes, FunctionsState};
 use super::observability_routes::{health_routes, observability_routes};
@@ -52,6 +53,7 @@ impl HttpServer {
         let realtime_state = Arc::new(RealtimeState::new());
         let backup_state = Arc::new(BackupState::new());
         let cluster_state = Arc::new(ClusterState::new());
+        let control_plane_state = Arc::new(ControlPlaneState::new());
 
         // Configure CORS from config
         let cors = if config.cors_origins.is_empty() {
@@ -99,6 +101,8 @@ impl HttpServer {
             .nest("/backup", backup_routes(backup_state))
             // Cluster routes under /cluster
             .nest("/cluster", cluster_routes(cluster_state))
+            // Control plane routes (multi-tenant management)
+            .merge(control_plane_routes(control_plane_state))
             // Apply CORS middleware
             .layer(cors)
     }
@@ -133,6 +137,7 @@ impl HttpServer {
         println!("  - /backup/* - Backup & restore");
         println!("  - /cluster/* - Cluster management");
         println!("  - /observability/* - Metrics & monitoring");
+        println!("  - /v1/tenants/* - Control Plane (multi-tenant)");
 
         let listener = TcpListener::bind(addr).await?;
         axum::serve(listener, self.router).await?;

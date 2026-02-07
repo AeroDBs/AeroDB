@@ -23,6 +23,7 @@ pub mod auth_routes;
 pub mod backup_routes;
 pub mod cluster_routes;
 pub mod config;
+pub mod control_plane_routes;
 pub mod database_routes;
 pub mod functions_routes;
 pub mod observability_routes;
