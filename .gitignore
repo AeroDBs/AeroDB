@@ -1,0 +1,89 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo lock for libraries (keep for binaries)
+# Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment and configuration
+.env
+.env.local
+*.local
+aerodb.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database data files (local testing)
+/data/
+/wal/
+/snapshots/
+*.db
+*.wal
+*.snapshot
+
+# Backup files
+*.bak
+backup/
+
+# Test artifacts
+/test-results/
+/coverage/
+
+# Frontend (dashboard)
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+dashboard/*.log
+dashboard/.DS_Store
+
+# Lock files (frontend)
+dashboard/package-lock.json
+dashboard/yarn.lock
+dashboard/pnpm-lock.yaml
+
+# History rewrite scripts (temporary)
+commits.txt
+dates.map
+filter-env.sh
+generate_dates.py
+
+# Documentation build artifacts
+/docs/build/
+/site/
+venv/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Git backup refs
+.git/refs/original/
+
+# Prompts (development)
+prompts/

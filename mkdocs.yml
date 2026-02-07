@@ -1,0 +1,313 @@
+site_name: AeroDB Documentation
+site_description: A strict, deterministic, self-hostable database built for production
+site_author: AeroDB Contributors
+site_url: https://eshanized.github.io/AeroDB/
+
+repo_name: eshanized/AeroDB
+repo_url: https://github.com/eshanized/AeroDB
+edit_uri: edit/master/docs/
+
+# Theme Configuration
+theme:
+  name: material
+  custom_dir: docs/overrides
+  palette:
+    # Dracula theme colors
+    scheme: dracula
+    primary: deep purple
+    accent: pink
+  font:
+    text: Noto Sans
+    code: Fira Code
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - search.share
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+
+# Extra Configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/eshanized/AeroDB
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/aerodb
+
+
+# Custom CSS for Dracula theme
+extra_css:
+  - stylesheets/everblush.css
+  - stylesheets/extra.css
+
+# Navigation Structure
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quick Start: getting-started/quickstart.md
+    - Installation: INSTALL.md
+    - Configuration: CONFIG.md
+  
+  - Core Concepts:
+    - Vision & Philosophy: CORE_VISION.md
+    - Architecture: CORE_SCOPE.md
+    - Invariants: CORE_INVARIANTS.md
+    - Reliability: CORE_RELIABILITY.md
+    - Error Handling: CORE_ERRORS.md
+  
+  - Storage Layer:
+    - Storage Model: CORE_STORAGE.md
+    - Write-Ahead Log: CORE_WAL.md
+    - Snapshots: CORE_SNAPSHOT.md
+    - Checkpoints: CORE_CHECKPOINT.md
+    - Backup: CORE_BACKUP.md
+    - Restore: CORE_RESTORE.md
+  
+  - Data Model:
+    - Schema System: CORE_SCHEMA.md
+    - Query Engine: CORE_QUERY.md
+    - API Specification: CORE_API_SPEC.md
+  
+  - System Operations:
+    - Boot Process: CORE_BOOT.md
+    - Lifecycle: CORE_LIFECYCLE.md
+    - Critical Paths: CRITICAL_PATHS.md
+    - Crash Testing: CRASH_TESTING.md
+  
+  - MVCC (Multi-Version Concurrency):
+    - MVCC Model: MVCC_MODEL.md
+    - Visibility Rules: MVCC_VISIBILITY_RULES.md
+    - WAL Integration: MVCC_WAL_INTEGRATION.md
+    - Snapshot Model: MVCC_SNAPSHOT_MODEL.md
+    - Garbage Collection: MVCC_GC_MODEL.md
+    - Testing Strategy: MVCC_TESTING.md
+    - Failure Matrix: MVCC_FAILURE_MATRIX.md
+    - Compatibility: MVCC_COMPATIBILITY.md
+  
+  - Replication:
+    - Vision: REPL_VISION.md
+    - Replication Model: REPL_MODEL.md
+    - WAL Flow: REPL_WAL_FLOW.md
+    - Read Rules: REPL_READ_RULES.md
+    - Recovery: REPL_RECOVERY_MODEL.md
+    - Snapshot Transfer: REPL_SNAPSHOT_TRANSFER.md
+    - Invariants: REPL_INVARIANTS.md
+    - Proofs: REPL_PROOFS.md
+    - Failure Matrix: REPL_FAILURE_MATRIX.md
+    - Compatibility: REPL_COMPATIBILITY.md
+    - Runtime Architecture: REPLICATION_RUNTIME_ARCHITECTURE.md
+  
+  - Performance:
+    - Vision: PERF_VISION.md
+    - Baseline: PERF_BASELINE.md
+    - Invariants: PERF_INVARIANTS.md
+    - Proof Rules: PERF_PROOF_RULES.md
+    - Semantic Equivalence: PERF_SEMANTIC_EQUIVALENCE.md
+    - Failure Model: PERF_FAILURE_MODEL.md
+    - Disablement: PERF_DISABLEMENT.md
+    - Optimizations:
+      - Group Commit: PERF_GROUP_COMMIT.md
+      - WAL Batching: PERF_WAL_BATCHING.md
+      - Read Path: PERF_READ_PATH.md
+      - Index Acceleration: PERF_INDEX_ACCELERATION.md
+      - Checkpoint Pipelining: PERF_CHECKPOINT_PIPELINING.md
+      - Replica Read Fast Path: PERF_REPLICA_READ_FAST_PATH.md
+      - Memory Layout: PERF_MEMORY_LAYOUT.md
+    - Observability: PERF_OBSERVABILITY.md
+  
+  - Developer Experience:
+    - Vision: DX_VISION.md
+    - Invariants: DX_INVARIANTS.md
+    - Observability API: DX_OBSERVABILITY_API.md
+    - Observability Principles: DX_OBSERVABILITY_PRINCIPLES.md
+    - Admin UI Architecture: DX_ADMIN_UI_ARCH.md
+    - Explanation Model: DX_EXPLANATION_MODEL.md
+  
+  - Implementation Phases:
+    - Phase 1 (Readiness): INIT_READINESS.md
+    - Phase 2 (Replication):
+      - Vision: REPLICATION_VISION.md
+      - Invariants: REPLICATION_INVARIANTS.md
+      - Proofs: REPLICATION_PROOFS.md
+      - Roadmap: REPLICATION_ROADMAP.md
+      - Replication Roadmap: REPLICATION_ROADMAP.md
+      - Readiness: REPLICATION_READINESS.md
+    - Phase 5 (Observability):
+      - Vision: OBSERVABILITY_VISION.md
+      - Invariants: OBSERVABILITY_INVARIANTS.md
+      - Implementation Order: OBSERVABILITY_IMPLEMENTATION_ORDER.md
+      - Failure Matrix: OBSERVABILITY_FAILURE_MATRIX.md
+      - Testing Strategy: OBSERVABILITY_TESTING_STRATEGY.md
+      - Observability Mapping: OBSERVABILITY_OBSERVABILITY_MAPPING.md
+      - Readiness: OBSERVABILITY_READINESS.md
+    - Phase 6 (Failover):
+      - Vision: FAILOVER_VISION.md
+      - Architecture: FAILOVER_ARCHITECTURE.md
+      - Scope: FAILOVER_SCOPE.md
+      - State Machine: FAILOVER_STATE_MACHINE.md
+      - Invariants: FAILOVER_INVARIANTS.md
+      - Failure Model: FAILOVER_FAILURE_MODEL.md
+      - Implementation Order: FAILOVER_IMPLEMENTATION_ORDER.md
+      - Testing Strategy: FAILOVER_TESTING_STRATEGY.md
+      - Observability Mapping: FAILOVER_OBSERVABILITY_MAPPING.md
+      - Readiness: FAILOVER_READINESS.md
+    - Phase 7 (Control Plane):
+      - Vision: CONTROL_PLANE_VISION.md
+      - Scope: CONTROL_PLANE_SCOPE.md
+      - Architecture: CONTROL_PLANE_CONTROL_PLANE_ARCHITECTURE.md
+      - Authority Model: CONTROL_PLANE_AUTHORITY_MODEL.md
+      - State Model: CONTROL_PLANE_STATE_MODEL.md
+      - Command Model: CONTROL_PLANE_COMMAND_MODEL.md
+      - Confirmation Model: CONTROL_PLANE_CONFIRMATION_MODEL.md
+      - Error Model: CONTROL_PLANE_ERROR_MODEL.md
+      - Invariants: CONTROL_PLANE_INVARIANTS.md
+      - Failure Model: CONTROL_PLANE_FAILURE_MODEL.md
+      - Auditability: CONTROL_PLANE_AUDITABILITY.md
+      - Testing Strategy: CONTROL_PLANE_TESTING_STRATEGY.md
+      - Observability Model: CONTROL_PLANE_OBSERVABILITY_MODEL.md
+      - Freeze Checklist: CONTROL_PLANE_FREEZE_CHECKLIST.md
+      - Readiness: CONTROL_PLANE_READINESS.md
+    - Phase 8 (Authentication):
+      - Vision: AUTH_VISION.md
+      - Architecture: AUTH_ARCHITECTURE.md
+      - Token Model: AUTH_TOKEN_MODEL.md
+      - Session Model: AUTH_SESSION_MODEL.md
+      - RLS Model: AUTH_RLS_MODEL.md
+      - Invariants: AUTH_INVARIANTS.md
+      - Failure Model: AUTH_FAILURE_MODEL.md
+      - Testing Strategy: AUTH_TESTING_STRATEGY.md
+      - Observability Mapping: AUTH_OBSERVABILITY_MAPPING.md
+      - Readiness: AUTH_READINESS.md
+    - Phase 9 (Auto API):
+      - Vision: AUTO_API_VISION.md
+      - Architecture: AUTO_API_ARCHITECTURE.md
+      - Relation Model: AUTO_API_RELATION_MODEL.md
+      - Schema Model: AUTO_API_SCHEMA_MODEL.md
+      - Query Model: AUTO_API_QUERY_MODEL.md
+      - REST Spec: AUTO_API_REST_SPEC.md
+      - Invariants: AUTO_API_INVARIANTS.md
+      - Failure Model: AUTO_API_FAILURE_MODEL.md
+      - Observability Mapping: AUTO_API_OBSERVABILITY_MAPPING.md
+      - Readiness: AUTO_API_READINESS.md
+    - Phase 10 (Realtime):
+      - Vision: REALTIME_VISION.md
+      - Architecture: REALTIME_ARCHITECTURE.md
+      - Event Model: REALTIME_EVENT_MODEL.md
+      - Subscription Model: REALTIME_SUBSCRIPTION_MODEL.md
+      - Broadcast Model: REALTIME_BROADCAST_MODEL.md
+      - Presence Model: REALTIME_PRESENCE_MODEL.md
+      - Determinism Boundary: REALTIME_DETERMINISM_BOUNDARY.md
+      - Invariants: REALTIME_INVARIANTS.md
+      - Testing Strategy: REALTIME_TESTING_STRATEGY.md
+      - Readiness: REALTIME_READINESS.md
+    - Phase 11 (Storage):
+      - Vision: OBJECT_STORAGE_VISION.md
+      - Architecture: OBJECT_STORAGE_ARCHITECTURE.md
+      - Bucket Model: OBJECT_STORAGE_BUCKET_MODEL.md
+      - Metadata Model: OBJECT_STORAGE_METADATA_MODEL.md
+      - Access Model: OBJECT_STORAGE_ACCESS_MODEL.md
+      - Invariants: OBJECT_STORAGE_INVARIANTS.md
+      - Failure Model: OBJECT_STORAGE_FAILURE_MODEL.md
+      - Testing Strategy: OBJECT_STORAGE_TESTING_STRATEGY.md
+      - Readiness: OBJECT_STORAGE_READINESS.md
+    - Phase 12 (Functions):
+      - Vision: FUNCTIONS_VISION.md
+      - Architecture: FUNCTIONS_ARCHITECTURE.md
+      - Function Model: FUNCTIONS_FUNCTION_MODEL.md
+      - Execution Model: FUNCTIONS_EXECUTION_MODEL.md
+      - Invariants: FUNCTIONS_INVARIANTS.md
+      - Failure Model: FUNCTIONS_FAILURE_MODEL.md
+      - Testing Strategy: FUNCTIONS_TESTING_STRATEGY.md
+      - Readiness: FUNCTIONS_READINESS.md
+    - Phase 13 (Admin UI):
+      - Vision: ADMIN_UI_VISION.md
+      - Architecture: ADMIN_UI_ARCHITECTURE.md
+      - UI Model: ADMIN_UI_UI_MODEL.md
+      - Invariants: ADMIN_UI_INVARIANTS.md
+      - Testing Strategy: ADMIN_UI_TESTING_STRATEGY.md
+      - Readiness: ADMIN_UI_READINESS.md
+    - Phase 14 (JS SDK):
+      - Vision: JS_SDK_VISION.md
+      - Architecture: JS_SDK_ARCHITECTURE.md
+      - Readiness: JS_SDK_READINESS.md
+    - Phase 15:
+      - Vision: MANAGED_HOSTING_VISION.md
+      - Readiness: MANAGED_HOSTING_READINESS.md
+    - Phase 16:
+      - Vision: DEV_TOOLS_VISION.md
+      - Readiness: DEV_TOOLS_READINESS.md
+  
+  - Reference:
+    - Project Plan: PROJECT_PLAN.md
+    - Specification Index: SPEC_INDEX.md
+    - Claude Guidelines: CLAUDE.md
+  
+  - Contributing:
+    - How to Contribute: CONTRIBUTING.md
+    - Security Policy: SECURITY.md
+    - Changelog: CHANGELOG.md
+
+copyright: Copyright &copy; 2026 AeroDB Contributors

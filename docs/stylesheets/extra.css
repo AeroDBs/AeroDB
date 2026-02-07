@@ -1,0 +1,37 @@
+/* Additional custom styling */
+
+/* Better spacing for lists */
+.md-typeset ul li {
+    margin-bottom: 0.25em;
+}
+
+/* Task list styling */
+.task-list-item {
+    list-style-type: none;
+}
+
+/* Mermaid diagram background */
+.mermaid {
+    background-color: #282a36;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #282a36;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #6272a4;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #bd93f9;
+}

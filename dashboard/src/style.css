@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@layer base {
+
+  /* Everblush Light Theme (Mapped from catppuccin or similiar light) */
+  :root {
+    --color-background: 0 0% 98%;
+    --color-foreground: 233 13% 13%;
+    /* #141b1e inverted ish */
+    --color-card: 0 0% 100%;
+    --color-card-foreground: 233 13% 13%;
+    --color-popover: 0 0% 100%;
+    --color-popover-foreground: 233 13% 13%;
+    --color-primary: 153 60% 53%;
+    /* #67b0e8 (Blue from everblush converted to HSL approx 206, 73, 66 - wait, let's use actual hex-to-hsl) */
+    /* Everblush Blue: #67b0e8 -> HSL(206, 73%, 66%) */
+    /* Everblush Green: #8ccf7e -> HSL(110, 46%, 65%) */
+    /* Everblush Red: #e57474 -> HSL(0, 69%, 68%) */
+    --color-primary: 206 73% 66%;
+    --color-primary-foreground: 0 0% 100%;
+    --color-secondary: 240 5% 96%;
+    --color-secondary-foreground: 233 13% 13%;
+    --color-muted: 240 5% 96%;
+    --color-muted-foreground: 240 4% 46%;
+    --color-accent: 240 5% 96%;
+    --color-accent-foreground: 233 13% 13%;
+    --color-destructive: 0 69% 68%;
+    --color-destructive-foreground: 0 0% 100%;
+    --color-border: 240 6% 90%;
+    --color-input: 240 6% 90%;
+    --color-ring: 206 73% 66%;
+    --radius: 0.5rem;
+  }
+
+  /* Everblush Dark Theme */
+  .dark {
+    /* Background: #141b1e -> HSL(200, 20%, 10%) */
+    --color-background: 200 20% 10%;
+    /* Foreground: #dadada -> HSL(0, 0%, 85%) */
+    --color-foreground: 0 0% 85%;
+
+    /* Card: #232a2d (slightly lighter than bg) -> HSL(200, 13%, 16%) */
+    --color-card: 200 13% 16%;
+    --color-card-foreground: 0 0% 85%;
+
+    --color-popover: 200 13% 16%;
+    --color-popover-foreground: 0 0% 85%;
+
+    /* Primary: #67b0e8 (Blue) -> HSL(206, 73%, 66%) */
+    --color-primary: 206 73% 66%;
+    --color-primary-foreground: 200 20% 10%;
+
+    /* Secondary: #2d3437 -> HSL(200, 10%, 20%) */
+    --color-secondary: 200 10% 20%;
+    --color-secondary-foreground: 0 0% 85%;
+
+    --color-muted: 200 10% 20%;
+    --color-muted-foreground: 200 10% 60%;
+
+    --color-accent: 200 10% 20%;
+    --color-accent-foreground: 0 0% 85%;
+
+    /* Destructive: #e57474 (Red) -> HSL(0, 69%, 68%) */
+    --color-destructive: 0 69% 68%;
+    --color-destructive-foreground: 0 0% 100%;
+
+    /* Border: #2d3437 */
+    --color-border: 200 10% 20%;
+    --color-input: 200 10% 20%;
+
+    /* Ring: #67b0e8 */
+    --color-ring: 206 73% 66%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--color-border));
+  }
+
+  body {
+    background-color: hsl(var(--color-background));
+    color: hsl(var(--color-foreground));
+    font-family: 'Lato', sans-serif;
+  }
+}
