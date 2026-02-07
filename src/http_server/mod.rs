@@ -29,6 +29,7 @@ pub mod functions_routes;
 pub mod observability_routes;
 pub mod realtime_routes;
 pub mod server;
+pub mod setup_guard;
 pub mod setup_routes;
 pub mod storage_routes;
 

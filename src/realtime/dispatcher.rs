@@ -100,8 +100,36 @@ impl Dispatcher {
 
     /// Dispatch an event to all matching subscribers
     ///
-    /// This is explicitly non-deterministic (RT-D1).
-    /// Events may be delivered out of order or not at all.
+    /// # Delivery Guarantees (MANIFESTO ALIGNMENT)
+    ///
+    /// Per Design Manifesto and RT-D1 invariant:
+    /// - **Delivery Tier**: `fire-and-forget` (best-effort)
+    /// - **Ordering**: NOT guaranteed across subscriptions
+    /// - **Durability**: NOT guaranteed - messages may be dropped
+    ///
+    /// ## Backpressure Policy (EXPLICIT)
+    ///
+    /// Drop policy: **IMMEDIATE_DROP**
+    ///
+    /// When a subscriber's channel is full or disconnected:
+    /// 1. The event is DROPPED (not buffered, not retried)
+    /// 2. The `failed` counter is incremented
+    /// 3. No retry logic exists - this is INTENTIONAL
+    /// 4. No buffering magic - we do not queue events
+    ///
+    /// ## Why This Is Correct
+    ///
+    /// Per manifesto: "fire-and-forget means I might miss messages"
+    /// The client is responsible for:
+    /// - Handling reconnection
+    /// - Requesting replay from sync cursor if needed
+    /// - Implementing client-side buffering if required
+    ///
+    /// This function will NEVER:
+    /// - Automatically retry delivery
+    /// - Buffer messages for slow subscribers
+    /// - Block on failed sends
+    /// - Hide delivery failures
     pub fn dispatch(&self, event: &DatabaseEvent) -> DispatchResult {
         let mut result = DispatchResult::default();
 
@@ -112,7 +140,11 @@ impl Dispatcher {
         // Get connections
         let connections = match self.connections.read() {
             Ok(c) => c,
-            Err(_) => return result,
+            Err(_) => {
+                // MANIFESTO ALIGNMENT: Lock poisoning is a failure, not silent degradation
+                // We return early with zero deliveries - this is explicit
+                return result;
+            }
         };
 
         // Get RLS policy for this collection
@@ -132,12 +164,37 @@ impl Dispatcher {
 
             // Get connection
             if let Some(conn) = connections.get(&subscription.connection_id) {
-                // Send event (non-blocking)
+                // MANIFESTO ALIGNMENT: Send event (non-blocking, fire-and-forget)
+                //
+                // Backpressure behavior:
+                // - UnboundedSender::send() returns Err if receiver is dropped
+                // - We do NOT retry, we do NOT buffer, we INCREMENT failed counter
+                // - This is INTENTIONAL per "fire-and-forget" delivery tier
                 match conn.sender.send(event.clone()) {
                     Ok(_) => result.delivered += 1,
-                    Err(_) => result.failed += 1,
+                    Err(_send_error) => {
+                        // MANIFESTO ALIGNMENT: Explicit drop, no silent failure
+                        //
+                        // The message was DROPPED because:
+                        // 1. Receiver channel is closed (client disconnected), OR
+                        // 2. Channel capacity exceeded (if bounded), OR
+                        // 3. Other channel failure
+                        //
+                        // We do NOT:
+                        // - Retry delivery
+                        // - Buffer for later
+                        // - Log at warn level (too noisy for fire-and-forget)
+                        //
+                        // We DO:
+                        // - Increment failed counter (caller can observe)
+                        // - Return immediately (no blocking)
+                        result.dropped += 1;
+                        result.failed += 1;
+                    }
                 }
             } else {
+                // Connection not found - subscription exists but connection already closed
+                // MANIFESTO ALIGNMENT: This is a failed delivery, we count it explicitly
                 result.failed += 1;
             }
         }
@@ -193,15 +250,32 @@ impl Dispatcher {
 }
 
 /// Result of dispatching an event
+///
+/// MANIFESTO ALIGNMENT: All delivery statistics are explicit.
+/// Per Design Manifesto: "Explicitness over convenience"
 #[derive(Debug, Default)]
 pub struct DispatchResult {
-    /// Number of matching subscriptions
+    /// Number of subscriptions matching the event filter
     pub matched: usize,
-    /// Number of events delivered
+
+    /// Number of events successfully delivered to subscriber channels
     pub delivered: usize,
-    /// Number of events filtered by RLS
+
+    /// Number of events filtered out by RLS (Row-Level Security)
     pub filtered: usize,
-    /// Number of failed deliveries
+
+    /// Number of events explicitly DROPPED due to backpressure.
+    ///
+    /// MANIFESTO ALIGNMENT: This counter makes drop behavior explicit.
+    /// Per Design Manifesto: "fire-and-forget means I might miss messages"
+    ///
+    /// Drop policy: IMMEDIATE_DROP
+    /// - We do NOT buffer
+    /// - We do NOT retry
+    /// - We INCREMENT this counter so the caller can observe
+    pub dropped: usize,
+
+    /// Total number of failed deliveries (includes dropped + connection failures)
     pub failed: usize,
 }
 

@@ -21,10 +21,14 @@ use super::database_routes::{database_routes, DatabaseState};
 use super::functions_routes::{functions_routes, FunctionsState};
 use super::observability_routes::{health_routes, observability_routes};
 use super::realtime_routes::{realtime_routes, RealtimeState};
+use super::setup_guard::setup_guard;
 use super::setup_routes::{setup_routes, SetupState};
 use super::storage_routes::{storage_routes, StorageState};
 
 /// HTTP Server for AeroDB Dashboard
+///
+/// MANIFESTO ALIGNMENT: Server startup is explicit.
+/// Protected routes require setup completion per manifesto discipline.
 pub struct HttpServer {
     config: HttpServerConfig,
     router: Router,
@@ -43,6 +47,10 @@ impl HttpServer {
     }
 
     /// Build the combined router with all endpoints
+    ///
+    /// MANIFESTO ALIGNMENT: Route structure enforces setup discipline.
+    /// - /health and /setup/* are ALWAYS accessible
+    /// - All other routes require setup completion (503 if not ready)
     fn build_router(config: &HttpServerConfig) -> Router {
         // Create shared states for each module
         let setup_state = Arc::new(SetupState::new());
@@ -77,12 +85,11 @@ impl HttpServer {
                 .allow_headers(Any)
         };
 
-        // Combine all routes
-        Router::new()
-            // Health check at root level
-            .merge(health_routes())
-            // Setup routes under /setup (first-run wizard, locked after complete)
-            .nest("/setup", setup_routes(setup_state))
+        // MANIFESTO ALIGNMENT: Protected routes that require setup completion
+        //
+        // Per Design Manifesto: "The platform cannot be used before configuration."
+        // These routes will return 503 Service Unavailable if setup is not complete.
+        let protected_routes = Router::new()
             // Auth routes under /auth
             .nest("/auth", auth_routes(auth_state.clone()))
             // Auth management routes (extends /auth with user management, sessions, RLS, etc.)
@@ -103,6 +110,20 @@ impl HttpServer {
             .nest("/cluster", cluster_routes(cluster_state))
             // Control plane routes (multi-tenant management)
             .merge(control_plane_routes(control_plane_state))
+            // MANIFESTO ALIGNMENT: Apply setup guard to ALL protected routes
+            .layer(axum::middleware::from_fn_with_state(
+                setup_state.clone(),
+                setup_guard,
+            ));
+
+        // Combine all routes
+        Router::new()
+            // Health check at root level - ALWAYS accessible (no setup required)
+            .merge(health_routes())
+            // Setup routes under /setup - ALWAYS accessible (how else would you complete setup?)
+            .nest("/setup", setup_routes(setup_state))
+            // Protected routes - require setup completion
+            .merge(protected_routes)
             // Apply CORS middleware
             .layer(cors)
     }

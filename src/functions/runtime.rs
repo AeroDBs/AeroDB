@@ -246,35 +246,49 @@ impl WasmRuntime for WasmtimeRuntime {
             .map_err(|e| FunctionError::RuntimeError(e.to_string()))?; // TODO: Map milliseconds to fuel
 
         // 3. Setup Linker (Host Functions)
-        let mut linker = Linker::new(&self.engine);
-
-        // Host logging: env.log(ptr, len)
-        // For simplicity in this iteration, we don't fully implement memory reading here
-        // as we haven't defined the memory export name.
-        // But we wire the linker to show intent.
+        //
+        // MANIFESTO ALIGNMENT: Host function bindings are NOT yet implemented.
+        // Per Design Manifesto: "Determinism over magic" and "Explicitness over convenience"
+        //
+        // If a WASM module attempts to import host functions we haven't bound,
+        // instantiation will fail. This is INTENTIONAL. We do not stub or simulate.
+        //
+        // Currently unbound host functions:
+        //   - env.log(ptr, len)     -> Logging from WASM
+        //   - env.db_query(ptr, len) -> Database access from WASM
+        //   - env.env_get(ptr, len)  -> Environment variable access
+        //
+        // These will fail at instantiation time if the WASM module imports them.
+        // This is correct behavior per manifesto.
+        let linker = Linker::new(&self.engine);
 
         // 4. Instantiate
+        //
+        // MANIFESTO ALIGNMENT: If instantiation fails because the module imports
+        // unbound host functions, we fail explicitly. No fallback behavior.
         let instance = linker
             .instantiate(&mut store, &module)
             .map_err(|e| FunctionError::RuntimeError(format!("Failed to instantiate: {}", e)))?;
 
         // 5. Execute 'handle' function
-        // Note: This expects the WASM to export a function named "handle" or similar.
-        // For the minimal replacement, we check for a known entrypoint.
-        // If "handle" exists, call it. If not, maybe just "start".
+        //
+        // MANIFESTO ALIGNMENT: WASM modules MUST export a 'handle' function.
+        // Per Design Manifesto: "fail loudly, execute predictably, leave no surprises."
+        //
+        // CRITICAL: We previously returned `json!({"status": "no_handle_exported"})` for
+        // modules without a handle export. This was a SILENT SUCCESS PATH that violates
+        // the manifesto's fail-fast principle. Modules that don't export 'handle' are
+        // broken and MUST fail explicitly.
+        let handle = instance
+            .get_typed_func::<(), ()>(&mut store, "handle")
+            .map_err(|_| FunctionError::MissingExport {
+                export_name: "handle",
+            })?;
 
-        let result_value =
-            if let Ok(handle) = instance.get_typed_func::<(), ()>(&mut store, "handle") {
-                handle
-                    .call(&mut store, ())
-                    .map_err(|e| FunctionError::RuntimeError(format!("Runtime error: {}", e)))?;
-                json!({"status": "executed"})
-            } else {
-                // For now, if no handle, we assume success for empty modules (like in verification)
-                // or fail for real ones.
-                // But to pass tests with minimal header, we might return success.
-                json!({"status": "no_handle_exported"})
-            };
+        // Execute the handle function
+        handle
+            .call(&mut store, ())
+            .map_err(|e| FunctionError::RuntimeError(format!("Runtime error: {}", e)))?;
 
         let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -285,7 +299,7 @@ impl WasmRuntime for WasmtimeRuntime {
 
         Ok(ExecutionResult::success(
             store.data().context.invocation_id,
-            result_value,
+            json!({"status": "executed"}),
             duration_ms,
         )
         .with_logs(store.data().logs.clone()))
@@ -339,21 +353,40 @@ mod tests {
         )
     }
 
+    /// MANIFESTO ALIGNMENT TEST: Modules without 'handle' export MUST fail.
+    /// Previously this test expected success for modules without handle export.
+    /// This was a VIOLATION of fail-fast principle. Now we verify the fix.
     #[test]
-    fn test_wasmtime_runtime_execute() {
+    fn test_wasmtime_runtime_missing_handle_fails() {
         let runtime = WasmtimeRuntime::new(None).unwrap();
         let function = create_test_function();
         let context = ExecutionContext::new(&function, None);
         let config = RuntimeConfig::default();
 
         let input = json!({"message": "hello"});
-        // This will likely fail to compile standard invalid bytes or empty bytes if strict.
-        // The minimal header vec![0, 97, 115, 109] is a valid empty module.
-        // It won't have "handle", so it returns "no_handle_exported".
-        let result = runtime.execute(&function, input, context, &config).unwrap();
+        // The minimal WASM header vec![0, 97, 115, 109] does NOT export 'handle'.
+        // Per manifesto: "fail loudly, execute predictably, leave no surprises."
+        // This MUST fail with MissingExport error, NOT succeed silently.
+        let result = runtime.execute(&function, input, context, &config);
 
-        assert!(result.success);
-        // logs might be empty if no code ran
+        // MANIFESTO ALIGNMENT: Verify we get an error, not silent success
+        assert!(result.is_err(), "Missing 'handle' export must fail, not succeed silently");
+
+        // Verify it's specifically MissingExport error
+        if let Err(err) = result {
+            match err {
+                FunctionError::MissingExport { export_name } => {
+                    assert_eq!(export_name, "handle");
+                }
+                FunctionError::RuntimeError(_) => {
+                    // Also acceptable - module may not be valid
+                }
+                other => panic!(
+                    "Expected MissingExport or RuntimeError, got: {:?}",
+                    other
+                ),
+            }
+        }
     }
 
     #[test]

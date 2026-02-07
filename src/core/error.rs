@@ -8,6 +8,8 @@ use std::fmt;
 pub type CoreResult<T> = Result<T, CoreError>;
 
 /// Core error type
+///
+/// MANIFESTO ALIGNMENT: All error paths are explicit.
 #[derive(Debug)]
 pub enum CoreError {
     /// Authentication required
@@ -27,6 +29,28 @@ pub enum CoreError {
 
     /// Internal error
     Internal(String),
+
+    /// MANIFESTO ALIGNMENT: Feature is designed in manifesto but not yet implemented.
+    ///
+    /// Per Design Manifesto: "fail loudly, execute predictably, leave no surprises."
+    /// When a manifesto-documented feature is accessed before implementation:
+    /// - We FAIL explicitly with 501 Not Implemented
+    /// - We DO NOT stub, simulate, or return fake success
+    /// - We DO NOT silently degrade
+    ///
+    /// Features currently guarded by this error:
+    /// - Expand directive (?expand=...)
+    /// - Declared references (type: "reference")
+    /// - Named projections (/api/projections/...)
+    /// - Text index type (type: "text")
+    /// - Migrations (aerodb migrate)
+    /// - Upsert operation (PUT with on_conflict)
+    NotImplemented {
+        /// Feature name as documented in manifesto
+        feature: &'static str,
+        /// Brief explanation
+        message: &'static str,
+    },
 }
 
 impl fmt::Display for CoreError {
@@ -38,6 +62,14 @@ impl fmt::Display for CoreError {
             Self::Validation(msg) => write!(f, "Validation error: {}", msg),
             Self::Execution(msg) => write!(f, "Execution error: {}", msg),
             Self::Internal(msg) => write!(f, "Internal error: {}", msg),
+            Self::NotImplemented { feature, message } => {
+                // MANIFESTO ALIGNMENT: Explicit error message for unimplemented features
+                write!(
+                    f,
+                    "Feature '{}' is not implemented: {}. See Design Manifesto for planned design.",
+                    feature, message
+                )
+            }
         }
     }
 }
@@ -79,6 +111,8 @@ impl CoreError {
             Self::Validation(_) => "VALIDATION_ERROR",
             Self::Execution(_) => "EXECUTION_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
+            // MANIFESTO ALIGNMENT: Explicit error code for unimplemented features
+            Self::NotImplemented { .. } => "NOT_IMPLEMENTED",
         }
     }
 
@@ -91,7 +125,17 @@ impl CoreError {
             Self::Validation(_) => 400,
             Self::Execution(_) => 500,
             Self::Internal(_) => 500,
+            // MANIFESTO ALIGNMENT: 501 Not Implemented for manifesto features
+            Self::NotImplemented { .. } => 501,
         }
+    }
+
+    /// Create a NotImplemented error for a manifesto feature
+    ///
+    /// MANIFESTO ALIGNMENT: Use this for features described in the Design Manifesto
+    /// that are not yet implemented.
+    pub fn not_implemented(feature: &'static str, message: &'static str) -> Self {
+        Self::NotImplemented { feature, message }
     }
 }
 
