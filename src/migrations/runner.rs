@@ -337,8 +337,10 @@ mod tests {
     use serde_yaml; // Added for serde_yaml::to_string
 
     fn create_test_migration(dir: &Path, version: u64, name: &str) {
-        // Use serde to generate properly formatted YAML
-        let migration = Migration {
+        use super::super::checksum::generate_checksum_for_file;
+        
+        // Create migration without checksum first to compute it
+        let mut migration = Migration {
             version,
             name: name.to_string(),
             checksum: "".to_string(),
@@ -352,6 +354,10 @@ mod tests {
                 name: name.to_string(),
             }],
         };
+        
+        // Serialize, compute checksum, then re-serialize with checksum
+        let content_for_checksum = serde_yaml::to_string(&migration).unwrap();
+        migration.checksum = generate_checksum_for_file(&content_for_checksum);
         
         let content = serde_yaml::to_string(&migration).unwrap();
         let filename = format!("{:03}_{}.yaml", version, name);
