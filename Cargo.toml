@@ -43,6 +43,10 @@ regex = "1.0"
 # Phase 12: Serverless Functions
 croner = "2.0"
 
+# Phase 14: Migrations
+serde_yaml = "0.9"
+whoami = "1.4"
+
 # Production Email
 lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
 wasmtime = "41.0.3"

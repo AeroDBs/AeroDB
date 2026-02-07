@@ -16,6 +16,7 @@ pub mod file_storage;
 pub mod functions;
 pub mod http_server;
 pub mod index;
+pub mod migrations;
 pub mod mvcc;
 pub mod observability;
 pub mod performance;
