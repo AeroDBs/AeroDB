@@ -57,7 +57,7 @@ The Admin Dashboard is a **React-based SPA** (Single Page Application) that comm
 ## Application Structure
 
 ```
-dashboard/
+admin-console/
 ├── src/
 │   ├── components/          # Shared UI components
 │   │   ├── ui/              # shadcn/ui components

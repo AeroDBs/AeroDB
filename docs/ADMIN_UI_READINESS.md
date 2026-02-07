@@ -137,7 +137,7 @@ All invariants from [ADMIN_UI_INVARIANTS.md](ADMIN_UI_INVARIANTS.md) verified:
 - [x] ADMIN_UI_READINESS.md (this file)
 - [ ] ADMIN_UI_DEPLOYMENT.md
 - [ ] ADMIN_UI_OBSERVABILITY.md
-- [ ] README.md in dashboard/
+- [ ] README.md in admin-console/
 
 ---
 
@@ -211,7 +211,7 @@ All invariants from [ADMIN_UI_INVARIANTS.md](ADMIN_UI_INVARIANTS.md) verified:
 - [ ] **Developer Guide**
   - [ ] Setup instructions (`npm install`, `npm run dev`)
   - [ ] Environment variables
-  - [ ] Extending the dashboard (add new page)
+  - [ ] Extending the admin console (add new page)
 
 ---
 

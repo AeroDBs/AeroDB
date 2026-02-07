@@ -30,10 +30,10 @@ cargo build --release
 
 ## Step 3: Install Frontend Dependencies
 
-Navigate to the dashboard directory and install the necessary packages:
+Navigate to the admin console directory and install the necessary packages:
 
 ```bash
-cd dashboard
+cd admin-console
 npm install
 cd ..
 ```
@@ -54,7 +54,7 @@ You should see output indicating the server is running on `http://localhost:5432
 In a new terminal window, start the frontend development server:
 
 ```bash
-cd dashboard
+cd admin-console
 npm run dev
 ```
 

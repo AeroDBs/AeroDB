@@ -88,7 +88,7 @@ cargo build --release
 #### Frontend (Vue.js/TypeScript)
 
 ```bash
-cd dashboard
+cd admin-console
 
 # Install dependencies
 npm install
@@ -255,7 +255,7 @@ Closes #issue-number
 cargo run -- serve
 
 # Terminal 2: Frontend
-cd dashboard && npm run dev
+cd admin-console && npm run dev
 
 # Terminal 3: Tests (watch mode)
 cargo watch -x test
