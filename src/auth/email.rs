@@ -56,6 +56,9 @@ pub enum EmailTemplate {
 
     /// Password changed notification
     PasswordChanged { user_email: String },
+
+    /// Magic link authentication
+    MagicLink { link: String, user_email: String, expires_minutes: i64 },
 }
 
 /// Email sender trait for abstraction
@@ -147,6 +150,20 @@ impl SmtpEmailSender {
                     If you didn't make this change, please contact support immediately.\n\n\
                     Thanks,\n\
                     The AeroDB Team"
+                );
+                (user_email.clone(), subject, body)
+            }
+            EmailTemplate::MagicLink { link, user_email, expires_minutes } => {
+                let subject = "Your login link".to_string();
+                let body = format!(
+                    "Hello,\n\n\
+                    Click the link below to sign in:\n\n\
+                    {}\n\n\
+                    This link will expire in {} minutes.\n\n\
+                    If you didn't request this link, you can safely ignore this email.\n\n\
+                    Thanks,\n\
+                    The AeroDB Team",
+                    link, expires_minutes
                 );
                 (user_email.clone(), subject, body)
             }

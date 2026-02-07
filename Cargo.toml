@@ -27,6 +27,12 @@ sha2 = "0.10"
 subtle = "2.5"
 thiserror = "1.0"
 
+# Phase 8.5: OAuth/MFA/Magic Links
+hmac = "0.12"
+sha1 = "0.10"
+hex = "0.4"
+urlencoding = "2.1"
+
 # Phase 10: Real-Time WebSocket
 tokio-tungstenite = "0.21"
 futures-util = "0.3"

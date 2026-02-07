@@ -100,6 +100,49 @@ pub enum AuthError {
     /// Email sending failed
     #[error("Email error: {0}")]
     EmailError(String),
+
+    // ==================
+    // OAuth Errors
+    // ==================
+    /// OAuth provider error
+    #[error("OAuth error: {0}")]
+    OAuthError(String),
+
+    // ==================
+    // MFA Errors
+    // ==================
+    /// MFA verification failed
+    #[error("MFA error: {0}")]
+    MfaError(String),
+
+    /// MFA required for this operation
+    #[error("MFA verification required")]
+    MfaRequired,
+
+    // ==================
+    // Magic Link Errors
+    // ==================
+    /// Token is invalid
+    #[error("Token invalid: {0}")]
+    TokenInvalid(String),
+
+    // ==================
+    // Rate Limiting
+    // ==================
+    /// Rate limit exceeded
+    #[error("Rate limit exceeded: {0}")]
+    RateLimitExceeded(String),
+
+    // ==================
+    // Validation Errors
+    // ==================
+    /// Validation error
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+
+    /// User not found
+    #[error("User not found")]
+    UserNotFound,
 }
 
 impl AuthError {
@@ -134,6 +177,15 @@ impl AuthError {
             AuthError::TokenGenerationFailed => 500,
             AuthError::StorageError(_) => 500,
             AuthError::EmailError(_) => 500,
+
+            // OAuth/MFA errors
+            AuthError::OAuthError(_) => 400,
+            AuthError::MfaError(_) => 400,
+            AuthError::MfaRequired => 403,
+            AuthError::TokenInvalid(_) => 401,
+            AuthError::RateLimitExceeded(_) => 429,
+            AuthError::ValidationError(_) => 400,
+            AuthError::UserNotFound => 404,
         }
     }
 
