@@ -181,6 +181,9 @@ mod tests {
     fn test_invoke() {
         let invoker = Invoker::new();
 
+        // Empty WASM module (no handle export)
+        // MANIFESTO ALIGNMENT: This should fail with MissingExport
+        // because the module doesn't export a 'handle' function
         let func = Function::new(
             "echo".to_string(),
             TriggerType::http("/echo".to_string()),
@@ -189,9 +192,9 @@ mod tests {
 
         let context = InvocationContext::new(&func, serde_json::json!({"input": "test"}), None);
 
-        let result = invoker.invoke(&func, context).unwrap();
-        assert!(result.success);
-        assert!(result.result.is_some());
+        // Should fail because empty WASM modules don't export 'handle'
+        let result = invoker.invoke(&func, context);
+        assert!(result.is_err(), "Empty WASM modules should fail with MissingExport");
     }
 
     #[test]

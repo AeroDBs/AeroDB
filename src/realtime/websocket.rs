@@ -521,10 +521,14 @@ mod tests {
 
     #[test]
     fn test_validate_token() {
+        // MANIFESTO ALIGNMENT: Random UUID strings are NOT valid JWTs
+        // The validate_token function now properly validates JWT format
+        // and rejects malformed tokens
         let user_id = Uuid::new_v4();
-        let result = validate_token(&user_id.to_string()).unwrap();
-        assert_eq!(result.user_id, Some(user_id));
-        assert!(result.is_authenticated);
+        let result = validate_token(&user_id.to_string());
+        
+        // Should fail because a UUID is not a valid JWT
+        assert!(result.is_err(), "UUID string is not a valid JWT");
     }
 
     #[test]
