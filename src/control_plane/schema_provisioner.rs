@@ -87,7 +87,7 @@ WITH CHECK (tenant_id = '{tenant_id}'::uuid);
             // For now, we just log the intent
             let sql_statements = Self::generate_schema_sql(tenant.tenant_id);
             for sql in &sql_statements {
-                tracing::info!("Would execute: {}", sql);
+                // Would execute: {sql} in production
             }
         }
 
@@ -113,8 +113,8 @@ WITH CHECK (tenant_id = '{tenant_id}'::uuid);
 
         if self.create_schema {
             // In production, execute SQL to drop schema
-            let sql = format!("DROP SCHEMA IF EXISTS {} CASCADE;", schema_name);
-            tracing::info!("Would execute: {}", sql);
+            let _sql = format!("DROP SCHEMA IF EXISTS {} CASCADE;", schema_name);
+            // Would execute: {_sql} in production
         }
 
         Ok(())

@@ -39,7 +39,7 @@ temp/
 
 # Backup files
 *.bak
-backup/
+# backup/
 
 # Test artifacts
 /test-results/

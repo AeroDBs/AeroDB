@@ -153,14 +153,15 @@ impl DatabaseProvisioner {
 
     /// Wait for database to be ready
     async fn wait_for_health(&self, port: u16, timeout_secs: u64) -> ControlPlaneResult<()> {
-        let url = format!("http://localhost:{}/health", port);
-        let client = reqwest::Client::new();
-
+        use tokio::net::TcpStream;
+        
+        let addr = format!("127.0.0.1:{}", port);
         let start = std::time::Instant::now();
+        
         loop {
-            match client.get(&url).send().await {
-                Ok(resp) if resp.status().is_success() => return Ok(()),
-                _ => {
+            match TcpStream::connect(&addr).await {
+                Ok(_) => return Ok(()),
+                Err(_) => {
                     if start.elapsed().as_secs() > timeout_secs {
                         return Err(ControlPlaneError::ProvisioningFailed {
                             tenant_id: "unknown".to_string(),
