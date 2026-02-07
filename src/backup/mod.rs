@@ -1,15 +1,10 @@
-//! # Backup Module
-//!
 //! Backup and restore functionality for AeroDB.
-//!
-//! This module provides backup creation, configuration, and restore capabilities.
 
-use std::path::Path;
 use std::fs::File;
 use std::io::{Read, Result as IoResult};
-use serde::{Deserialize, Serialize};
+use std::path::Path;
 
-/// Backup configuration
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BackupConfig {
     /// Enable automatic backups
@@ -23,7 +18,6 @@ pub struct BackupConfig {
 }
 
 impl BackupConfig {
-    /// Create a new backup config with defaults
     pub fn new() -> Self {
         Self {
             enabled: false,
@@ -34,77 +28,45 @@ impl BackupConfig {
     }
 }
 
-/// Backup manifest containing metadata about a backup
+/// Metadata about a backup archive.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupManifest {
-    /// Backup ID
     pub backup_id: String,
-    /// Snapshot ID
     pub snapshot_id: String,
-    /// Creation timestamp
     pub created_at: String,
-    /// Whether WAL is present
     pub wal_present: bool,
-    /// Format version
     pub format_version: u32,
 }
 
 impl BackupManifest {
-    /// Read manifest from a file
     pub fn read_from_file(path: &Path) -> IoResult<Self> {
         let mut file = File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        
-        serde_json::from_str(&contents).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-        })
+        serde_json::from_str(&contents)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
-    /// Write manifest to a file
     pub fn write_to_file(&self, path: &Path) -> IoResult<()> {
-        let contents = serde_json::to_string_pretty(self).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-        })?;
-        std::fs::write(path, contents)?;
-        Ok(())
+        let contents = serde_json::to_string_pretty(self)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        std::fs::write(path, contents)
     }
 }
 
-/// Backup status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BackupStatus {
-    /// Last backup timestamp
     pub last_backup: Option<String>,
-    /// Next scheduled backup
     pub next_backup: Option<String>,
-    /// Number of available backups
     pub backup_count: u32,
-    /// Total backup size in bytes
     pub total_size_bytes: u64,
 }
 
-impl Default for BackupStatus {
-    fn default() -> Self {
-        Self {
-            last_backup: None,
-            next_backup: None,
-            backup_count: 0,
-            total_size_bytes: 0,
-        }
-    }
-}
-
-/// Backup metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupMetadata {
-    /// Backup ID
     pub id: String,
-    /// Creation timestamp
     pub created_at: String,
-    /// Size in bytes
     pub size_bytes: u64,
-    /// Description
     pub description: Option<String>,
 }
 
