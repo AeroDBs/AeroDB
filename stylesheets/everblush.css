@@ -1,0 +1,95 @@
+/* Everblush Theme Overrides for MkDocs Material */
+:root {
+    /* Everblush Color Palette */
+    --everblush-background: #141b1e;
+    --everblush-current-line: #232a2d;
+    --everblush-selection: #232a2d;
+    --everblush-foreground: #dadada;
+    --everblush-comment: #67b0e8;
+    /* Using blue for comments */
+    --everblush-cyan: #8ccf7e;
+    /* Using green for links */
+    --everblush-green: #8ccf7e;
+    --everblush-orange: #e57474;
+    /* Red for orange */
+    --everblush-pink: #c47fd5;
+    /* Magenta */
+    --everblush-purple: #c47fd5;
+    --everblush-red: #e57474;
+    --everblush-yellow: #e5c76b;
+
+    /* Material Theme Mapping */
+    --md-primary-fg-color: #67b0e8;
+    /* Blue */
+    --md-primary-fg-color--light: #8ccf7e;
+    /* Green */
+    --md-primary-fg-color--dark: #232a2d;
+    /* Dark Grey */
+    --md-accent-fg-color: #67b0e8;
+    /* Blue */
+
+    /* Backgrounds */
+    --md-default-bg-color: #141b1e;
+    --md-default-fg-color: #dadada;
+    --md-default-fg-color--light: #dadada;
+    --md-default-fg-color--lighter: #67b0e8;
+
+    /* Code Blocks */
+    --md-code-bg-color: #141b1e;
+    --md-code-fg-color: #dadada;
+
+    /* Admonitions */
+    --md-admonition-bg-color: #232a2d;
+}
+
+/* Force dark mode colors */
+[data-md-color-scheme="dracula"] {
+    --md-default-bg-color: #141b1e;
+    --md-default-fg-color: #dadada;
+    --md-text-color: #dadada;
+    --md-text-link-color: #67b0e8;
+}
+
+/* Sidebar styling */
+.md-sidebar {
+    background-color: var(--everblush-background);
+}
+
+/* Header styling */
+.md-header {
+    background-color: var(--everblush-current-line);
+}
+
+/* Code block customization */
+.md-typeset pre>code {
+    background-color: #141b1e;
+    border: 1px solid #232a2d;
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+    border: 1px solid #232a2d;
+}
+
+.md-typeset table:not([class]) th {
+    background-color: #232a2d;
+    color: #dadada;
+}
+
+.md-typeset table:not([class]) td {
+    border-top: 1px solid #232a2d;
+}
+
+/* Links */
+a {
+    color: #67b0e8;
+}
+
+a:hover {
+    color: #8ccf7e;
+}
+
+/* Footer */
+.md-footer {
+    background-color: var(--everblush-current-line);
+}

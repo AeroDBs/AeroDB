@@ -1,0 +1,84 @@
+/* Dracula Theme Overrides for MkDocs Material */
+:root {
+  /* Dracula Color Palette */
+  --dracula-background: #282a36;
+  --dracula-current-line: #44475a;
+  --dracula-selection: #44475a;
+  --dracula-foreground: #f8f8f2;
+  --dracula-comment: #6272a4;
+  --dracula-cyan: #8be9fd;
+  --dracula-green: #50fa7b;
+  --dracula-orange: #ffb86c;
+  --dracula-pink: #ff79c6;
+  --dracula-purple: #bd93f9;
+  --dracula-red: #ff5555;
+  --dracula-yellow: #f1fa8c;
+
+  /* Material Theme Mapping */
+  --md-primary-fg-color:        #bd93f9; /* Purple */
+  --md-primary-fg-color--light: #ff79c6; /* Pink */
+  --md-primary-fg-color--dark:  #6272a4; /* Comment/Blue-Grey */
+  --md-accent-fg-color:         #ff79c6; /* Pink */
+  
+  /* Backgrounds */
+  --md-default-bg-color:        #282a36;
+  --md-default-fg-color:        #f8f8f2;
+  --md-default-fg-color--light: #f8f8f2;
+  --md-default-fg-color--lighter:#6272a4;
+  
+  /* Code Blocks */
+  --md-code-bg-color:           #282a36;
+  --md-code-fg-color:           #f8f8f2;
+  
+  /* Admonitions */
+  --md-admonition-bg-color:     #44475a;
+}
+
+/* Force dark mode colors */
+[data-md-color-scheme="dracula"] {
+  --md-default-bg-color: #282a36;
+  --md-default-fg-color: #f8f8f2;
+  --md-text-color: #f8f8f2;
+  --md-text-link-color: #8be9fd;
+}
+
+/* Sidebar styling */
+.md-sidebar {
+  background-color: var(--dracula-background);
+}
+
+/* Header styling */
+.md-header {
+  background-color: var(--dracula-current-line);
+}
+
+/* Code block customization */
+.md-typeset pre > code {
+  background-color: #282a36;
+  border: 1px solid #44475a;
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  border: 1px solid #44475a;
+}
+.md-typeset table:not([class]) th {
+  background-color: #44475a;
+  color: #f8f8f2;
+}
+.md-typeset table:not([class]) td {
+  border-top: 1px solid #44475a;
+}
+
+/* Links */
+a {
+  color: var(--dracula-cyan);
+}
+a:hover {
+  color: var(--dracula-green);
+}
+
+/* Footer */
+.md-footer {
+  background-color: var(--dracula-current-line);
+}
