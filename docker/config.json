@@ -1,0 +1,27 @@
+{
+    "data_dir": "/var/lib/aerodb",
+    "server": {
+        "host": "0.0.0.0",
+        "port": 54321
+    },
+    "wal": {
+        "max_size": 1073741824,
+        "sync_mode": "fsync"
+    },
+    "checkpoint": {
+        "interval_seconds": 300,
+        "wal_threshold": 1000
+    },
+    "replication": {
+        "enabled": false,
+        "role": "primary"
+    },
+    "auth": {
+        "jwt_secret": "CHANGE_THIS_IN_PRODUCTION",
+        "jwt_expiry_seconds": 3600
+    },
+    "logging": {
+        "level": "info",
+        "file": "/var/log/aerodb/aerodb.log"
+    }
+}

@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  aerodb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aerodb:latest
+    container_name: aerodb-server
+    ports:
+      - "54321:54321"
+    volumes:
+      # Data persistence
+      - aerodb_data:/var/lib/aerodb
+      # Configuration
+      - ./docker/config.json:/etc/aerodb/config.json:ro
+      # Logs (optional - for debugging)
+      - aerodb_logs:/var/log/aerodb
+    environment:
+      - RUST_LOG=info
+      - AERODB_CONFIG=/etc/aerodb/config.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/aerodb", "control", "diag", "diagnostics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - aerodb_net
+
+  # Optional: Add a simple web UI or admin panel in the future
+  # admin:
+  #   image: aerodb/admin-ui:latest
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - aerodb
+  #   networks:
+  #     - aerodb_net
+
+volumes:
+  aerodb_data:
+    driver: local
+  aerodb_logs:
+    driver: local
+
+networks:
+  aerodb_net:
+    driver: bridge

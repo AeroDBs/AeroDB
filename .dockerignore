@@ -1,0 +1,42 @@
+# Build artifacts
+target/
+**/target/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# Test data
+test_data/
+tmp/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Development files
+docker/
+deploy/
+examples/
