@@ -4,6 +4,7 @@
 //! - AERO_WAL_APPEND_FAILED (ERROR severity)
 //! - AERO_WAL_FSYNC_FAILED (FATAL severity)
 //! - AERO_WAL_CORRUPTION (FATAL severity)
+//! - AERO_WAL_DISK_FULL (ERROR severity) - Hardening: refuse before disk full
 
 use std::fmt;
 use std::io;
@@ -35,6 +36,8 @@ pub enum WalErrorCode {
     AeroWalFsyncFailed,
     /// WAL checksum failure
     AeroWalCorruption,
+    /// Disk full - HARDENING: refuse writes before exhaustion
+    AeroWalDiskFull,
 }
 
 impl WalErrorCode {
@@ -44,6 +47,7 @@ impl WalErrorCode {
             WalErrorCode::AeroWalAppendFailed => "AERO_WAL_APPEND_FAILED",
             WalErrorCode::AeroWalFsyncFailed => "AERO_WAL_FSYNC_FAILED",
             WalErrorCode::AeroWalCorruption => "AERO_WAL_CORRUPTION",
+            WalErrorCode::AeroWalDiskFull => "AERO_WAL_DISK_FULL",
         }
     }
 
@@ -53,6 +57,7 @@ impl WalErrorCode {
             WalErrorCode::AeroWalAppendFailed => Severity::Error,
             WalErrorCode::AeroWalFsyncFailed => Severity::Fatal,
             WalErrorCode::AeroWalCorruption => Severity::Fatal,
+            WalErrorCode::AeroWalDiskFull => Severity::Error, // Recoverable
         }
     }
 
@@ -62,6 +67,7 @@ impl WalErrorCode {
             WalErrorCode::AeroWalAppendFailed => Some("D1"),
             WalErrorCode::AeroWalFsyncFailed => Some("D1"),
             WalErrorCode::AeroWalCorruption => Some("K2"),
+            WalErrorCode::AeroWalDiskFull => None, // Resource limit, not invariant
         }
     }
 }
@@ -133,6 +139,32 @@ impl WalError {
             message: reason.into(),
             details: Some(format!("byte_offset: {}", offset)),
             source: None,
+        }
+    }
+
+    /// HARDENING: Create a disk full error
+    ///
+    /// Returns HTTP 507 Insufficient Storage.
+    /// System should enter read-only mode.
+    pub fn disk_full(available: u64, required: u64) -> Self {
+        Self {
+            code: WalErrorCode::AeroWalDiskFull,
+            message: format!(
+                "Insufficient disk space for WAL write: {} bytes available, {} bytes required",
+                available, required
+            ),
+            details: Some(format!("available_bytes: {}, required_bytes: {}", available, required)),
+            source: None,
+        }
+    }
+
+    /// Returns HTTP status code for API responses (HARDENING)
+    pub fn http_status_code(&self) -> u16 {
+        match self.code {
+            WalErrorCode::AeroWalDiskFull => 507, // Insufficient Storage
+            WalErrorCode::AeroWalAppendFailed => 500,
+            WalErrorCode::AeroWalFsyncFailed => 500,
+            WalErrorCode::AeroWalCorruption => 500,
         }
     }
 

@@ -51,6 +51,21 @@ pub enum CoreError {
         /// Brief explanation
         message: &'static str,
     },
+
+    /// HARDENING: Resource exhaustion - system protecting itself
+    ///
+    /// Per Production Hardening Analysis:
+    /// - Refuse before OOM
+    /// - Refuse before disk full
+    /// - Explicit HTTP status codes (507/503)
+    ResourceExhausted {
+        /// Resource type that is exhausted
+        resource: crate::resource_limits::ResourceType,
+        /// Detailed error message
+        message: String,
+        /// HTTP status code to return
+        http_status: u16,
+    },
 }
 
 impl fmt::Display for CoreError {
@@ -69,6 +84,9 @@ impl fmt::Display for CoreError {
                     "Feature '{}' is not implemented: {}. See Design Manifesto for planned design.",
                     feature, message
                 )
+            }
+            Self::ResourceExhausted { resource, message, .. } => {
+                write!(f, "Resource exhausted ({}): {}", resource, message)
             }
         }
     }
@@ -113,6 +131,7 @@ impl CoreError {
             Self::Internal(_) => "INTERNAL_ERROR",
             // MANIFESTO ALIGNMENT: Explicit error code for unimplemented features
             Self::NotImplemented { .. } => "NOT_IMPLEMENTED",
+            Self::ResourceExhausted { .. } => "RESOURCE_EXHAUSTED",
         }
     }
 
@@ -127,6 +146,8 @@ impl CoreError {
             Self::Internal(_) => 500,
             // MANIFESTO ALIGNMENT: 501 Not Implemented for manifesto features
             Self::NotImplemented { .. } => 501,
+            // HARDENING: Resource-specific status codes
+            Self::ResourceExhausted { http_status, .. } => *http_status,
         }
     }
 
@@ -142,5 +163,15 @@ impl CoreError {
 impl From<serde_json::Error> for CoreError {
     fn from(e: serde_json::Error) -> Self {
         Self::Validation(e.to_string())
+    }
+}
+
+impl From<crate::resource_limits::ResourceError> for CoreError {
+    fn from(e: crate::resource_limits::ResourceError) -> Self {
+        Self::ResourceExhausted {
+            resource: e.resource_type(),
+            message: e.to_string(),
+            http_status: e.http_status_code(),
+        }
     }
 }
