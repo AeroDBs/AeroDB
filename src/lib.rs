@@ -5,6 +5,7 @@
 pub mod api;
 pub mod auth;
 pub mod backup;
+pub mod backpressure;
 pub mod checkpoint;
 pub mod cli;
 pub mod config_validator;
