@@ -21,6 +21,7 @@ pub mod index;
 pub mod migrations;
 pub mod mvcc;
 pub mod observability;
+pub mod panic_handler;
 pub mod performance;
 pub mod planner;
 pub mod promotion;
