@@ -12,6 +12,7 @@ pub mod config_validator;
 pub mod control_plane;
 pub mod core;
 pub mod crash_point;
+pub mod dangerous_ops;
 pub mod dx;
 pub mod executor;
 pub mod file_storage;
