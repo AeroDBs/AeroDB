@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::errors::{AuthError, AuthResult};
+use super::security::SecurityConfig;
 
 /// RLS context carried with each request
 #[derive(Debug, Clone, Default)]
@@ -152,6 +153,9 @@ pub struct DefaultRlsEnforcer {
 
     /// Default policy for collections without explicit policy
     default_policy: RlsPolicy,
+
+    /// Security configuration
+    security_config: SecurityConfig,
 }
 
 impl DefaultRlsEnforcer {
@@ -159,7 +163,13 @@ impl DefaultRlsEnforcer {
         Self {
             policies: HashMap::new(),
             default_policy: RlsPolicy::default(),
+            security_config: SecurityConfig::default(),
         }
+    }
+
+    pub fn with_security_config(mut self, config: SecurityConfig) -> Self {
+        self.security_config = config;
+        self
     }
 
     pub fn with_policy(mut self, collection: &str, policy: RlsPolicy) -> Self {
@@ -250,7 +260,14 @@ impl RlsEnforcer for DefaultRlsEnforcer {
 
                 match doc_owner {
                     Some(owner) if owner == user_id => Ok(()),
-                    Some(_) => Err(AuthError::Unauthorized),
+                    Some(_) => {
+                        // Log failure if configured
+                        if self.security_config.audit_auth_failures {
+                            // In production this would use the structured logger
+                            eprintln!("RLS Deny: User {} attempted to write to doc owned by other user", user_id);
+                        }
+                        Err(AuthError::Unauthorized)
+                    },
                     None => Err(AuthError::MissingOwnerField(owner_field.clone())),
                 }
             }

@@ -14,6 +14,7 @@ pub mod magic_link;
 pub mod mfa;
 pub mod oauth;
 pub mod rls;
+pub mod security;
 pub mod session;
 pub mod user;
 
@@ -23,5 +24,6 @@ pub use magic_link::{AuthEvent, AuthHookPayload, AuthHooks, MagicLinkConfig, Mag
 pub use mfa::{MfaFactor, MfaFactorType, MfaService, TotpConfig};
 pub use oauth::{OAuthProvider, OAuthProviderConfig, OAuthService, OAuthUserInfo};
 pub use rls::{RlsContext, RlsEnforcer, RlsPolicy};
+pub use security::SecurityConfig;
 pub use session::{Session, SessionManager};
 pub use user::{User, UserRepository};

@@ -15,6 +15,11 @@ use crate::schema::{SchemaLoader, SchemaValidator};
 use crate::storage::{StoragePayload, StorageReader, StorageWriter};
 use crate::wal::{RecordType, WalPayload, WalWriter};
 
+use crate::resource_limits::ResourceManager;
+use crate::backpressure::BackpressureManager;
+use crate::admission_control::AdmissionController;
+use crate::query_limits::QueryLimitsConfig;
+
 use super::errors::{ApiError, ApiResult};
 use super::request::{DeleteRequest, InsertRequest, QueryRequest, Request, UpdateRequest};
 use super::response::Response;
@@ -26,6 +31,12 @@ pub struct Subsystems<'a> {
     pub storage_writer: &'a mut StorageWriter,
     pub storage_reader: &'a mut StorageReader,
     pub index_manager: &'a mut IndexManager,
+    
+    // Hardening components
+    pub resource_manager: &'a ResourceManager,
+    pub backpressure_manager: &'a BackpressureManager,
+    pub admission_controller: &'a AdmissionController,
+    pub query_limits: &'a QueryLimitsConfig,
 }
 
 /// API Handler with global execution lock
@@ -84,6 +95,14 @@ impl ApiHandler {
     /// 4. Apply to Storage
     /// 5. Update Index
     fn handle_insert(&self, req: InsertRequest, sys: &mut Subsystems<'_>) -> ApiResult<Value> {
+        // Hardening: Resource checks
+        if !sys.resource_manager.writes_allowed() {
+            return Err(ApiError::service_unavailable("System is in read-only mode due to resource exhaustion"));
+        }
+        if !sys.admission_controller.try_acquire_write() {
+            return Err(ApiError::too_many_requests("Write rate limit exceeded"));
+        }
+
         let validator = SchemaValidator::new(sys.schema_loader);
 
         // 1. Validate schema
@@ -103,6 +122,11 @@ impl ApiHandler {
         let body_bytes = serde_json::to_vec(&req.document).map_err(|e| {
             ApiError::invalid_request(format!("Failed to serialize document: {}", e))
         })?;
+
+        // Hardening: Check disk space
+        sys.resource_manager
+            .check_disk_space(body_bytes.len() as u64 + 1024)
+            .map_err(|e| ApiError::service_unavailable(e.to_string()))?;
 
         let wal_payload = WalPayload::new(
             &self.collection,
@@ -154,6 +178,14 @@ impl ApiHandler {
     /// 5. Apply to Storage
     /// 6. Update Index
     fn handle_update(&self, req: UpdateRequest, sys: &mut Subsystems<'_>) -> ApiResult<Value> {
+        // Hardening: Resource checks
+        if !sys.resource_manager.writes_allowed() {
+             return Err(ApiError::service_unavailable("System is in read-only mode due to resource exhaustion"));
+        }
+        if !sys.admission_controller.try_acquire_write() {
+             return Err(ApiError::too_many_requests("Write rate limit exceeded"));
+        }
+
         let validator = SchemaValidator::new(sys.schema_loader);
 
         // Extract document ID
@@ -182,6 +214,11 @@ impl ApiHandler {
         let body_bytes = serde_json::to_vec(&req.document).map_err(|e| {
             ApiError::invalid_request(format!("Failed to serialize document: {}", e))
         })?;
+
+        // Hardening: Check disk space
+        sys.resource_manager
+            .check_disk_space(body_bytes.len() as u64 + 1024)
+            .map_err(|e| ApiError::service_unavailable(e.to_string()))?;
 
         let wal_payload = WalPayload::new(
             &self.collection,
@@ -231,6 +268,19 @@ impl ApiHandler {
     /// 3. Apply tombstone to Storage
     /// 4. Update Index
     fn handle_delete(&self, req: DeleteRequest, sys: &mut Subsystems<'_>) -> ApiResult<Value> {
+        // Hardening: Resource checks
+        if !sys.resource_manager.writes_allowed() {
+             return Err(ApiError::service_unavailable("System is in read-only mode due to resource exhaustion"));
+        }
+        if !sys.admission_controller.try_acquire_write() {
+             return Err(ApiError::too_many_requests("Write rate limit exceeded"));
+        }
+        
+        // Hardening: Check disk space (minimal for tombstone)
+        sys.resource_manager
+            .check_disk_space(1024)
+            .map_err(|e| ApiError::service_unavailable(e.to_string()))?;
+
         // 1. Check document exists (via index)
         let offsets = sys.index_manager.lookup_pk(&req.document_id);
         if offsets.is_empty() {
@@ -280,6 +330,10 @@ impl ApiHandler {
     /// 3. Call Executor (simplified: use index + storage)
     /// 4. Return results
     fn handle_query(&self, req: QueryRequest, sys: &mut Subsystems<'_>) -> ApiResult<Value> {
+        // Hardening: Admission control for queries
+        let _guard = sys.admission_controller.acquire_query_guard()
+            .ok_or_else(|| ApiError::too_many_requests("Max concurrent queries exceeded"))?;
+
         // Build index metadata
         let index_metadata =
             IndexMetadata::with_indexes(sys.index_manager.indexed_fields().iter().cloned());
@@ -451,6 +505,11 @@ mod tests {
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
     use tempfile::TempDir;
+    
+    use crate::resource_limits::{ResourceManager, ResourceLimitsConfig};
+    use crate::backpressure::{BackpressureManager, BackpressureConfig};
+    use crate::admission_control::{AdmissionController, AdmissionControlConfig};
+    use crate::query_limits::QueryLimitsConfig;
 
     fn setup_test_env() -> (
         TempDir,
@@ -459,6 +518,10 @@ mod tests {
         StorageWriter,
         StorageReader,
         IndexManager,
+        ResourceManager,
+        BackpressureManager,
+        AdmissionController,
+        QueryLimitsConfig,
     ) {
         let temp_dir = TempDir::new().unwrap();
         let data_dir = temp_dir.path();
@@ -486,6 +549,16 @@ mod tests {
         indexed.insert("age".to_string());
         let index_manager = IndexManager::new(indexed);
 
+        // Hardening components with test defaults
+        let resource_config = ResourceLimitsConfig {
+            min_free_disk_bytes: 0, // Disable disk check for tests
+            ..Default::default()
+        };
+        let resource_manager = ResourceManager::new(resource_config, data_dir);
+        let backpressure_manager = BackpressureManager::new(BackpressureConfig::default());
+        let admission_controller = AdmissionController::new(AdmissionControlConfig::default());
+        let query_limits = QueryLimitsConfig::default();
+
         (
             temp_dir,
             loader,
@@ -493,12 +566,16 @@ mod tests {
             storage_writer,
             storage_reader,
             index_manager,
+            resource_manager,
+            backpressure_manager,
+            admission_controller,
+            query_limits,
         )
     }
 
     #[test]
     fn test_insert_and_query_roundtrip() {
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -507,6 +584,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         // Insert
@@ -535,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_invalid_schema_rejected() {
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -544,6 +626,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         // Insert with unknown schema
@@ -560,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_unbounded_query_rejected() {
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -569,6 +656,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         // Query without indexed filter
@@ -587,7 +679,7 @@ mod tests {
 
     #[test]
     fn test_explain_returns_deterministic_plan() {
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -596,6 +688,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         let explain_req = r#"{
@@ -616,7 +713,7 @@ mod tests {
     #[test]
     fn test_serialization_enforced() {
         // This test verifies the lock exists; actual blocking tested differently
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -625,6 +722,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         // Sequential operations should succeed
@@ -654,7 +756,7 @@ mod tests {
         // Corruption is surfaced when storage/WAL returns error
         // This is implicitly tested via pass-through errors
 
-        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index) = setup_test_env();
+        let (_temp, loader, mut wal, mut storage_w, mut storage_r, mut index, rm, bpm, ac, ql) = setup_test_env();
 
         let handler = ApiHandler::new("users");
         let mut subsystems = Subsystems {
@@ -663,6 +765,11 @@ mod tests {
             storage_writer: &mut storage_w,
             storage_reader: &mut storage_r,
             index_manager: &mut index,
+            resource_manager: &rm,
+            backpressure_manager: &bpm,
+            admission_controller: &ac,
+            query_limits: &ql,
+        };
         };
 
         // Insert a document - this confirms error propagation works

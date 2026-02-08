@@ -16,12 +16,13 @@
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 
 mod errors;
 pub use errors::{ResourceError, ResourceResult, ResourceType};
 
 /// Resource limits configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimitsConfig {
     /// Minimum free disk bytes before refusing writes (default: 1GB)
     pub min_free_disk_bytes: u64,

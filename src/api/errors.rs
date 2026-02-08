@@ -32,6 +32,10 @@ pub enum ApiErrorCode {
     AeroUnknownOperation,
     /// Pass-through error from subsystem
     PassThrough,
+    /// Service unavailable (resource exhaustion)
+    AeroServiceUnavailable,
+    /// Too many requests (backpressure)
+    AeroTooManyRequests,
 }
 
 impl ApiErrorCode {
@@ -41,6 +45,8 @@ impl ApiErrorCode {
             ApiErrorCode::AeroInvalidRequest => "AERO_INVALID_REQUEST",
             ApiErrorCode::AeroUnknownOperation => "AERO_UNKNOWN_OPERATION",
             ApiErrorCode::PassThrough => "PASS_THROUGH",
+            ApiErrorCode::AeroServiceUnavailable => "AERO_SERVICE_UNAVAILABLE",
+            ApiErrorCode::AeroTooManyRequests => "AERO_TOO_MANY_REQUESTS",
         }
     }
 
@@ -50,6 +56,8 @@ impl ApiErrorCode {
             ApiErrorCode::AeroInvalidRequest => Severity::Error,
             ApiErrorCode::AeroUnknownOperation => Severity::Error,
             ApiErrorCode::PassThrough => Severity::Error, // Can be overridden
+            ApiErrorCode::AeroServiceUnavailable => Severity::Error,
+            ApiErrorCode::AeroTooManyRequests => Severity::Error,
         }
     }
 }
@@ -86,6 +94,24 @@ impl ApiError {
         Self {
             code: ApiErrorCode::AeroUnknownOperation.code().to_string(),
             message: format!("Unknown operation: {}", op.into()),
+            severity: Severity::Error,
+        }
+    }
+
+    /// Create a service unavailable error
+    pub fn service_unavailable(reason: impl Into<String>) -> Self {
+        Self {
+            code: ApiErrorCode::AeroServiceUnavailable.code().to_string(),
+            message: reason.into(),
+            severity: Severity::Error,
+        }
+    }
+
+    /// Create a too many requests error
+    pub fn too_many_requests(reason: impl Into<String>) -> Self {
+        Self {
+            code: ApiErrorCode::AeroTooManyRequests.code().to_string(),
+            message: reason.into(),
             severity: Severity::Error,
         }
     }

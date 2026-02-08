@@ -269,7 +269,7 @@ impl OperationLogEntryBuilder {
 /// Operation log configuration
 ///
 /// MANIFESTO ALIGNMENT: Configuration is explicit, no hidden defaults.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationLogConfig {
     /// Whether operation logging is enabled
     ///

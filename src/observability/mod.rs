@@ -51,6 +51,26 @@ pub use scope::{ObservationScope, Timer};
 
 use std::fmt;
 use std::io;
+use serde::{Deserialize, Serialize};
+
+/// Observability configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservabilityConfig {
+    #[serde(default)]
+    pub operation_log: OperationLogConfig,
+    
+    #[serde(default)]
+    pub slow_query: slow_query::SlowQueryConfig,
+}
+
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            operation_log: OperationLogConfig::default(),
+            slow_query: slow_query::SlowQueryConfig::default(),
+        }
+    }
+}
 
 /// Observability error code
 ///

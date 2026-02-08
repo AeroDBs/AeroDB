@@ -2,6 +2,7 @@
 //!
 //! Core abstractions provide unified operation model and execution pipeline.
 
+pub mod admission_control;
 pub mod api;
 pub mod auth;
 pub mod backup;
@@ -26,6 +27,7 @@ pub mod panic_handler;
 pub mod performance;
 pub mod planner;
 pub mod promotion;
+pub mod query_limits;
 pub mod realtime;
 pub mod recovery;
 pub mod replication;

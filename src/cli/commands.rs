@@ -16,15 +16,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
+use crate::admission_control::{AdmissionControlConfig, AdmissionController};
 use crate::api::{ApiHandler, Subsystems};
+use crate::auth::security::SecurityConfig;
+use crate::backpressure::{BackpressureConfig, BackpressureManager};
 use crate::dx::api::control_plane::{
-    AuthorityContext, CommandRequest, ControlCommand, ControlPlaneCommand, ControlPlaneHandler,
-    DiagnosticCommand, InspectionCommand,
+    AuthorityContext, ControlAction, ControlCommand, ControlPlaneCommand, DiagnosticCommand,
+    DiagTarget, InspectTarget, InspectionCommand, ReplicaId,
 };
 use crate::index::IndexManager;
-use crate::observability::{AuditAction, AuditLog, AuditOutcome, AuditRecord, MemoryAuditLog};
+use crate::observability::{AuditAction, AuditLog, AuditOutcome, AuditRecord, MemoryAuditLog, ObservabilityConfig};
+use crate::query_limits::QueryLimitsConfig;
 use crate::recovery::RecoveryManager;
 use crate::replication::{ReplicationConfig, ReplicationRole, ReplicationState};
+use crate::resource_limits::{ResourceManager, ResourceLimitsConfig};
 use crate::schema::SchemaLoader;
 use crate::storage::{StorageReader, StorageWriter};
 use crate::wal::{WalReader, WalWriter};
@@ -47,9 +52,33 @@ pub struct Config {
     #[serde(default = "default_max_memory")]
     pub max_memory_bytes: u64,
 
-    /// WAL sync mode (optional, default "fsync")
+    /// Wal sync mode (optional, default fsync)
     #[serde(default = "default_wal_sync_mode")]
     pub wal_sync_mode: String,
+
+    /// Resource limits configuration
+    #[serde(default)]
+    pub resource_limits: ResourceLimitsConfig,
+
+    /// Observability configuration
+    #[serde(default)]
+    pub observability: ObservabilityConfig,
+
+    /// Backpressure configuration
+    #[serde(default)]
+    pub backpressure: BackpressureConfig,
+
+    /// Admission control configuration
+    #[serde(default)]
+    pub admission_control: AdmissionControlConfig,
+
+    /// Query limits configuration
+    #[serde(default)]
+    pub query_limits: QueryLimitsConfig,
+
+    /// Security configuration
+    #[serde(default)]
+    pub security: SecurityConfig,
 
     // --- Replication Configuration (Phase 5 Stage 1) ---
     // Per P5-I16: All fields default to disabled.
@@ -84,11 +113,20 @@ fn default_replication_role() -> String {
 }
 
 impl Config {
-    /// Load configuration from file
+    /// Load configuration from file (supports JSON and TOML)
     pub fn load(path: &Path) -> CliResult<Self> {
         let content = fs::read_to_string(path)
             .map_err(|e| CliError::config_error(format!("Failed to read config: {}", e)))?;
 
+        // Check for TOML extension
+        if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            let config: Config = toml::from_str(&content)
+                .map_err(|e| CliError::config_error(format!("Invalid config TOML: {}", e)))?;
+            config.validate()?;
+            return Ok(config);
+        }
+
+        // Default to JSON
         let config: Config = serde_json::from_str(&content)
             .map_err(|e| CliError::config_error(format!("Invalid config JSON: {}", e)))?;
 
@@ -284,8 +322,8 @@ pub fn start(config_path: &Path) -> CliResult<()> {
     }
 
     // Boot the system
-    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager) =
-        boot_system(data_dir)?;
+    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager, rm, bpm, ac) =
+        boot_system(&config)?;
 
     // Initialize API handler
     let handler = ApiHandler::new("default");
@@ -303,6 +341,10 @@ pub fn start(config_path: &Path) -> CliResult<()> {
                     storage_writer: &mut storage_writer,
                     storage_reader: &mut storage_reader,
                     index_manager: &mut index_manager,
+                    resource_manager: &rm,
+                    backpressure_manager: &bpm,
+                    admission_controller: &ac,
+                    query_limits: &config.query_limits,
                 };
 
                 let response = handler.handle(&request_str, &mut subsystems);
@@ -336,8 +378,8 @@ pub fn query(config_path: &Path) -> CliResult<()> {
     }
 
     // Boot the system
-    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager) =
-        boot_system(data_dir)?;
+    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager, rm, bpm, ac) =
+        boot_system(&config)?;
 
     // Read single request from stdin
     let request = read_request()?;
@@ -365,6 +407,10 @@ pub fn query(config_path: &Path) -> CliResult<()> {
         storage_writer: &mut storage_writer,
         storage_reader: &mut storage_reader,
         index_manager: &mut index_manager,
+        resource_manager: &rm,
+        backpressure_manager: &bpm,
+        admission_controller: &ac,
+        query_limits: &config.query_limits,
     };
 
     let response = handler.handle(&request_str, &mut subsystems);
@@ -386,8 +432,8 @@ pub fn explain(config_path: &Path) -> CliResult<()> {
     }
 
     // Boot the system
-    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager) =
-        boot_system(data_dir)?;
+    let (mut wal_writer, mut storage_writer, mut storage_reader, schema_loader, mut index_manager, rm, bpm, ac) =
+        boot_system(&config)?;
 
     // Read single request from stdin
     let request = read_request()?;
@@ -409,6 +455,10 @@ pub fn explain(config_path: &Path) -> CliResult<()> {
         storage_writer: &mut storage_writer,
         storage_reader: &mut storage_reader,
         index_manager: &mut index_manager,
+        resource_manager: &rm,
+        backpressure_manager: &bpm,
+        admission_controller: &ac,
+        query_limits: &config.query_limits,
     };
 
     let response = handler.handle(&request_str, &mut subsystems);
@@ -436,8 +486,8 @@ pub fn serve(config_path: &Path, port: u16) -> CliResult<()> {
     }
 
     // Boot the system (same as start command)
-    let (_wal_writer, _storage_writer, _storage_reader, _schema_loader, _index_manager) =
-        boot_system(data_dir)?;
+    let (_wal_writer, _storage_writer, _storage_reader, _schema_loader, _index_manager, _rm, _bpm, _ac) =
+        boot_system(&config)?;
 
     // Create HTTP server with configured port
     use crate::http_server::{HttpServer, HttpServerConfig};
@@ -1271,15 +1321,20 @@ fn is_initialized(data_dir: &Path) -> bool {
 /// FATAL: Any failure at any step halts startup immediately.
 /// No partial startup. No serving without complete recovery.
 fn boot_system(
-    data_dir: &Path,
+    config: &Config,
 ) -> CliResult<(
     WalWriter,
     StorageWriter,
     StorageReader,
     SchemaLoader,
     IndexManager,
+    ResourceManager,
+    BackpressureManager,
+    AdmissionController,
 )> {
     use crate::recovery::RecoveryStorage;
+
+    let data_dir = Path::new(&config.data_dir);
 
     // Step 1: Load schemas (required for schema validation during recovery)
     let mut schema_loader = SchemaLoader::new(data_dir);
@@ -1351,12 +1406,20 @@ fn boot_system(
         .map_err(|e| CliError::boot_failed(format!("WAL writer open failed: {}", e)))?;
 
     // Recovery complete - system may now enter SERVING state
+    // Initialize hardening components
+    let resource_manager = ResourceManager::new(config.resource_limits.clone(), data_dir);
+    let backpressure_manager = BackpressureManager::new(config.backpressure.clone());
+    let admission_controller = AdmissionController::new(config.admission_control.clone());
+
     Ok((
         wal_writer,
         storage_writer,
         storage_reader,
         schema_loader,
         index_manager,
+        resource_manager,
+        backpressure_manager,
+        admission_controller,
     ))
 }
 
@@ -1455,5 +1518,47 @@ mod tests {
         assert_eq!(config.max_wal_size_bytes, 1073741824);
         assert_eq!(config.max_memory_bytes, 536870912);
         assert_eq!(config.wal_sync_mode, "fsync");
+    }
+
+    #[test]
+    fn test_config_load_toml() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("aerodb.toml");
+        let data_dir = temp_dir.path().join("data");
+
+        // Manually format TOML string as we don't assume toml serialize available
+        let toml_content = format!(
+            r#"
+            data_dir = "{}"
+            wal_sync_mode = "fsync"
+            
+            [resource_limits]
+            min_free_disk_bytes = 1048576
+            max_memory_bytes = 1073741824
+            max_file_descriptors = 500
+            max_result_set_docs = 1000
+            warning_threshold_percent = 75
+            critical_threshold_percent = 90
+
+            [observability.operation_log]
+            enabled = true
+            retention_days = 7
+            
+            [observability.slow_query]
+            enabled = true
+            threshold_ms = 100
+            sample_rate = 1.0
+            "#,
+            data_dir.to_string_lossy()
+        );
+
+        fs::write(&config_path, toml_content).unwrap();
+
+        let config = Config::load(&config_path).expect("Failed to load TOML config");
+        
+        assert_eq!(config.data_dir, data_dir.to_string_lossy());
+        assert_eq!(config.resource_limits.min_free_disk_bytes, 1048576);
+        assert!(config.observability.operation_log.enabled);
+        assert!(config.observability.slow_query.enabled);
     }
 }

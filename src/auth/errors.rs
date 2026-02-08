@@ -143,6 +143,17 @@ pub enum AuthError {
     /// User not found
     #[error("User not found")]
     UserNotFound,
+
+    // ==================
+    // System Errors
+    // ==================
+    /// Authentication service unavailable (Fail-Closed)
+    #[error("Authentication service unavailable")]
+    ServiceUnavailable,
+
+    /// RLS Policy Error (Fail-Closed)
+    #[error("Security policy error: {0}")]
+    PolicyError(String),
 }
 
 impl AuthError {
@@ -177,6 +188,10 @@ impl AuthError {
             AuthError::TokenGenerationFailed => 500,
             AuthError::StorageError(_) => 500,
             AuthError::EmailError(_) => 500,
+            AuthError::PolicyError(_) => 500,
+
+            // 503 Service Unavailable
+            AuthError::ServiceUnavailable => 503,
 
             // OAuth/MFA errors
             AuthError::OAuthError(_) => 400,
