@@ -31,6 +31,7 @@ pub mod realtime_routes;
 pub mod server;
 pub mod setup_guard;
 pub mod setup_routes;
+pub mod settings_routes;
 pub mod storage_routes;
 
 pub use config::HttpServerConfig;

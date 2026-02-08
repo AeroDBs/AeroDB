@@ -189,6 +189,12 @@ const router = createRouter({
             component: () => import('@/pages/observability/MetricsPage.vue'),
             meta: { requiresAuth: true },
         },
+        {
+            path: '/settings',
+            name: 'Settings',
+            component: () => import('@/pages/settings/SettingsPage.vue'),
+            meta: { requiresAuth: true },
+        },
     ],
 })
 

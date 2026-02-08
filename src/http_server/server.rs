@@ -23,6 +23,7 @@ use super::observability_routes::{health_routes, observability_routes};
 use super::realtime_routes::{realtime_routes, RealtimeState};
 use super::setup_guard::setup_guard;
 use super::setup_routes::{setup_routes, SetupState};
+use super::settings_routes::{settings_routes, SettingsState};
 use super::storage_routes::{storage_routes, StorageState};
 
 /// HTTP Server for AeroDB Dashboard
@@ -62,6 +63,7 @@ impl HttpServer {
         let backup_state = Arc::new(BackupState::new());
         let cluster_state = Arc::new(ClusterState::new());
         let control_plane_state = Arc::new(ControlPlaneState::new());
+        let settings_state = Arc::new(SettingsState::new());
 
         // Configure CORS from config
         let cors = if config.cors_origins.is_empty() {
@@ -108,6 +110,8 @@ impl HttpServer {
             .nest("/backup", backup_routes(backup_state))
             // Cluster routes under /cluster
             .nest("/cluster", cluster_routes(cluster_state))
+            // Settings routes under /settings
+            .nest("/settings", settings_routes(settings_state))
             // Control plane routes (multi-tenant management)
             .merge(control_plane_routes(control_plane_state))
             // MANIFESTO ALIGNMENT: Apply setup guard to ALL protected routes
