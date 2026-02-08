@@ -339,7 +339,8 @@ mod tests {
         // Third should fail
         match manager.try_acquire_connection() {
             Err(BackpressureError::ConnectionLimitReached { .. }) => {}
-            other => panic!("Expected ConnectionLimitReached, got {:?}", other),
+            Ok(_) => panic!("Expected ConnectionLimitReached, got Ok"),
+            Err(e) => panic!("Expected ConnectionLimitReached, got {}", e),
         }
     }
 
@@ -372,10 +373,11 @@ mod tests {
         let _q1 = manager.try_enqueue().unwrap();
         let _q2 = manager.try_enqueue().unwrap();
         
-        match manager.try_enqueue() {
-            Err(BackpressureError::QueueFull { .. }) => {}
-            other => panic!("Expected QueueFull, got {:?}", other),
-        }
+        // Third should fail
+        assert!(matches!(
+            manager.try_enqueue(),
+            Err(BackpressureError::QueueFull { .. })
+        ));
     }
 
     #[test]
@@ -390,10 +392,11 @@ mod tests {
         let _op1 = conn.try_start_operation().unwrap();
         let _op2 = conn.try_start_operation().unwrap();
         
-        match conn.try_start_operation() {
-            Err(BackpressureError::TooManyOpsPerConnection { .. }) => {}
-            other => panic!("Expected TooManyOpsPerConnection, got {:?}", other),
-        }
+        // Third should fail
+        assert!(matches!(
+            conn.try_start_operation(),
+            Err(BackpressureError::TooManyOpsPerConnection { .. })
+        ));
     }
 
     #[test]
