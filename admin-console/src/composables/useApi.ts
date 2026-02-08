@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
-const baseURL = import.meta.env.VITE_AERODB_URL || 'http://localhost:54321'
+const baseURL = import.meta.env.VITE_AERODB_URL || 'http://127.0.0.1:54321'
 
 let apiInstance: AxiosInstance | null = null
 
