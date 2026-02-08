@@ -37,13 +37,15 @@ mod logger;
 mod metrics;
 pub mod operation_log;
 mod scope;
+pub mod slow_query;
 
 pub use audit::{AuditAction, AuditLog, AuditOutcome, AuditRecord, FileAuditLog, MemoryAuditLog};
 pub use events::Event;
 pub use logger::{Logger, Severity};
 pub use metrics::{MetricsRegistry, MetricsSnapshot};
 pub use operation_log::{
-    OperationLog, OperationLogConfig, OperationLogEntry, OperationType, SharedOperationLog,
+    OperationLog, OperationLogConfig, OperationLogEntry, OperationResult, OperationType,
+    SharedOperationLog,
 };
 pub use scope::{ObservationScope, Timer};
 

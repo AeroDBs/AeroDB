@@ -14,6 +14,7 @@
 //! - **Presence**: User presence tracking
 //! - **WebSocket**: Network layer for connections
 
+pub mod backpressure;
 pub mod broadcast;
 pub mod dispatcher;
 pub mod errors;
@@ -22,6 +23,11 @@ pub mod event_log;
 pub mod presence;
 pub mod subscription;
 pub mod websocket;
+
+pub use backpressure::{
+    BackpressureChannel, BackpressureConfig, BackpressureCounters, BackpressureRejected,
+    BackpressureResult, BackpressureSnapshot, DropPolicy, SendAction,
+};
 
 pub use broadcast::BroadcastChannel;
 pub use dispatcher::Dispatcher;

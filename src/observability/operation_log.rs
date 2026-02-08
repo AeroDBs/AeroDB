@@ -68,6 +68,24 @@ impl OperationType {
     }
 }
 
+/// Operation result for audit trail
+///
+/// MANIFESTO ALIGNMENT: Explicit success/failure tracking.
+/// Per certification requirement: Must log result status for forensics.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum OperationResult {
+    /// Operation completed successfully
+    Success,
+    /// Operation failed with explicit error
+    Error {
+        /// Error code (e.g., "AERO_SCHEMA_INVALID")
+        code: String,
+        /// Human-readable error message
+        message: String,
+    },
+}
+
 /// A single operation log entry
 ///
 /// MANIFESTO ALIGNMENT: All fields are explicit. No hidden data.
@@ -109,6 +127,16 @@ pub struct OperationLogEntry {
     ///
     /// MANIFESTO ALIGNMENT: Slow threshold is configurable, not guessed.
     pub is_slow: bool,
+
+    /// Result status of the operation
+    ///
+    /// CERTIFICATION REQUIREMENT: Must track success/error for forensics.
+    pub result_status: OperationResult,
+
+    /// Reference to deterministic explain plan (if available)
+    ///
+    /// CERTIFICATION REQUIREMENT: Enables correlation with query plan.
+    pub explain_plan_ref: Option<String>,
 }
 
 impl OperationLogEntry {
@@ -123,6 +151,8 @@ impl OperationLogEntry {
             documents_affected: None,
             index_used: None,
             slow_threshold_ms: 100,
+            result_status: OperationResult::Success,
+            explain_plan_ref: None,
         }
     }
 }
@@ -137,6 +167,8 @@ pub struct OperationLogEntryBuilder {
     documents_affected: Option<usize>,
     index_used: Option<String>,
     slow_threshold_ms: u64,
+    result_status: OperationResult,
+    explain_plan_ref: Option<String>,
 }
 
 impl OperationLogEntryBuilder {
@@ -190,6 +222,31 @@ impl OperationLogEntryBuilder {
         self
     }
 
+    /// Set result status
+    ///
+    /// CERTIFICATION REQUIREMENT: Track success/error for forensics.
+    pub fn result_status(mut self, status: OperationResult) -> Self {
+        self.result_status = status;
+        self
+    }
+
+    /// Set result as error
+    pub fn error(mut self, code: impl Into<String>, message: impl Into<String>) -> Self {
+        self.result_status = OperationResult::Error {
+            code: code.into(),
+            message: message.into(),
+        };
+        self
+    }
+
+    /// Set explain plan reference
+    ///
+    /// CERTIFICATION REQUIREMENT: Correlation with query plan.
+    pub fn explain_plan_ref(mut self, plan_ref: impl Into<String>) -> Self {
+        self.explain_plan_ref = Some(plan_ref.into());
+        self
+    }
+
     /// Build the log entry
     pub fn build(self) -> OperationLogEntry {
         OperationLogEntry {
@@ -203,6 +260,8 @@ impl OperationLogEntryBuilder {
             documents_affected: self.documents_affected,
             index_used: self.index_used,
             is_slow: self.duration_ms > self.slow_threshold_ms,
+            result_status: self.result_status,
+            explain_plan_ref: self.explain_plan_ref,
         }
     }
 }
