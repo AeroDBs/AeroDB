@@ -94,6 +94,51 @@ pub enum Command {
         #[command(subcommand)]
         action: MigrateAction,
     },
+
+    /// Schema management commands
+    ///
+    /// Create, list, and inspect database schemas.
+    Schema {
+        /// Path to configuration file
+        #[arg(long, default_value = "./aerodb.json")]
+        config: PathBuf,
+
+        #[command(subcommand)]
+        action: SchemaAction,
+    },
+
+    /// Deployment commands
+    ///
+    /// Generate deployment configurations and manage deployments.
+    Deploy {
+        /// Path to configuration file
+        #[arg(long, default_value = "./aerodb.json")]
+        config: PathBuf,
+
+        #[command(subcommand)]
+        action: DeployAction,
+    },
+
+    /// Log viewing commands
+    ///
+    /// View and filter AeroDB logs.
+    Logs {
+        /// Path to configuration file
+        #[arg(long, default_value = "./aerodb.json")]
+        config: PathBuf,
+
+        /// Number of recent log lines to show
+        #[arg(long, short = 'n', default_value = "100")]
+        lines: usize,
+
+        /// Filter by log level (debug, info, warn, error)
+        #[arg(long, short = 'l')]
+        level: Option<String>,
+
+        /// Follow log output (like tail -f)
+        #[arg(long, short = 'f')]
+        follow: bool,
+    },
 }
 
 /// Control plane actions.
@@ -230,6 +275,62 @@ pub enum MigrateAction {
 
     /// Show migration status
     Status,
+}
+
+/// Schema management actions.
+#[derive(Subcommand, Debug)]
+pub enum SchemaAction {
+    /// List all schemas
+    List,
+
+    /// Show details of a specific schema
+    Show {
+        /// Schema name
+        #[arg(long)]
+        name: String,
+    },
+
+    /// Create a new schema from JSON file
+    Create {
+        /// Path to schema JSON file
+        #[arg(long)]
+        file: PathBuf,
+    },
+
+    /// Generate TypeScript types from schemas
+    Types {
+        /// Output directory for generated types
+        #[arg(long, default_value = "./types")]
+        output: PathBuf,
+    },
+}
+
+/// Deployment actions.
+#[derive(Subcommand, Debug)]
+pub enum DeployAction {
+    /// Generate Docker Compose configuration
+    Docker {
+        /// Output file path
+        #[arg(long, default_value = "./docker-compose.yml")]
+        output: PathBuf,
+    },
+
+    /// Generate Kubernetes manifests
+    K8s {
+        /// Output directory for manifests
+        #[arg(long, default_value = "./k8s")]
+        output: PathBuf,
+    },
+
+    /// Show deployment status
+    Status,
+
+    /// Generate environment file template
+    Env {
+        /// Output file path
+        #[arg(long, default_value = "./.env.example")]
+        output: PathBuf,
+    },
 }
 
 impl Cli {
