@@ -166,6 +166,18 @@ const router = createRouter({
             meta: { requiresAuth: true },
         },
         {
+            path: '/control-plane',
+            name: 'ControlPlane',
+            component: () => import('@/pages/control-plane/TenantManagementPage.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
+            path: '/control-plane/tenants/:id',
+            name: 'TenantDetails',
+            component: () => import('@/pages/control-plane/TenantDetailsPage.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
             path: '/logs',
             name: 'Logs',
             component: () => import('@/pages/observability/LogsPage.vue'),

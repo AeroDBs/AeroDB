@@ -173,6 +173,32 @@ export interface RestoreJob {
     completed_at?: string
 }
 
+export interface BackupInfo {
+    id: string
+    name: string
+    created_at: string
+    size_bytes: number
+    backup_type: string
+    status: string
+}
+
+export interface BackupSchedule {
+    enabled: boolean
+    cron_expression: string
+    retention_days: number
+    backup_type: string
+    last_run?: string
+    next_run?: string
+}
+
+export interface BackupStats {
+    total_backups: number
+    total_size_bytes: number
+    last_backup_at?: string
+    scheduled_backups_count: number
+    failed_backups_24h: number
+}
+
 // ========== Snapshot & Checkpoint Types ==========
 
 export interface Snapshot {
@@ -247,5 +273,61 @@ export interface MetricType {
     description: string
     unit: string
     category: 'system' | 'database' | 'replication' | 'performance'
+}
+
+// ========== Control Plane (Multi-Tenant) Types ==========
+
+export interface Tenant {
+    id: string
+    name: string
+    admin_email: string
+    plan: 'free' | 'pro' | 'enterprise'
+    status: 'active' | 'suspended' | 'deleted'
+    created_at: string
+    updated_at: string
+}
+
+export interface TenantDetails extends Tenant {
+    isolation_model: 'schema' | 'database' | 'cluster'
+    database_name?: string
+    schema_name?: string
+    metadata?: Record<string, unknown>
+}
+
+export interface TenantUsage {
+    tenant_id: string
+    api_requests: number
+    storage_bytes: number
+    database_rows: number
+    active_connections: number
+    bandwidth_bytes: number
+    period_start: string
+    period_end: string
+}
+
+export interface TenantQuota {
+    api_requests_per_month: number
+    storage_bytes: number
+    max_connections: number
+    max_databases: number
+    max_tables_per_database: number
+    max_rows_per_table: number
+}
+
+export interface Invoice {
+    id: string
+    tenant_id: string
+    period_start: string
+    period_end: string
+    amount_cents: number
+    currency: string
+    status: 'draft' | 'pending' | 'paid' | 'overdue'
+    line_items: Array<{
+        description: string
+        quantity: number
+        unit_price_cents: number
+        total_cents: number
+    }>
+    generated_at: string
 }
 

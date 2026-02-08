@@ -17,7 +17,9 @@ const navItems = [
   { to: '/realtime', label: 'Real-Time', icon: '⚡' },
   { to: '/cluster', label: 'Cluster', icon: '🖥️' },
   { to: '/backup', label: 'Backup', icon: '💾' },
+  { to: '/restore', label: 'Restore', icon: '♻️' },
   { to: '/snapshots', label: 'Snapshots', icon: '📸' },
+  { to: '/control-plane', label: 'Tenants', icon: '🏢' },
   { to: '/logs', label: 'Logs', icon: '📋' },
   { to: '/metrics', label: 'Metrics', icon: '📊' },
 ]
