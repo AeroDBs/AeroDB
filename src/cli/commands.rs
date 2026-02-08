@@ -29,7 +29,7 @@ use crate::schema::SchemaLoader;
 use crate::storage::{StorageReader, StorageWriter};
 use crate::wal::{WalReader, WalWriter};
 
-use super::args::{Command, ControlAction, DiagTarget, InspectTarget};
+use super::args::{Command, ControlAction, DiagTarget, InspectTarget, MigrateAction};
 use super::errors::{CliError, CliResult};
 use super::io::{read_request, read_requests, write_error, write_json, write_response};
 
@@ -222,6 +222,7 @@ pub fn run_command(cmd: Command) -> CliResult<()> {
         Command::Explain { config } => explain(&config),
         Command::Serve { config, port } => serve(&config, port),
         Command::Control { config, action } => control(&config, action),
+        Command::Migrate { config, action } => migrate(&config, action),
     }
 }
 
@@ -509,6 +510,220 @@ pub fn control(config_path: &Path, action: ControlAction) -> CliResult<()> {
 
             // Output error
             write_error(e.code(), e.message())?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Execute a migration command (Phase 14).
+///
+/// MANIFESTO ALIGNMENT: Deterministic, checksummed, reversible migrations.
+/// All operations are explicit with clear success/failure feedback.
+pub fn migrate(config_path: &Path, action: MigrateAction) -> CliResult<()> {
+    use crate::migrations::{
+        generator::MigrationGenerator,
+        operations::InMemoryExecutor,
+        runner::MigrationRunner,
+    };
+    use std::sync::Arc;
+
+    let config = Config::load(config_path)?;
+    let data_dir = config.data_path();
+
+    // Migrations directory defaults to data_dir/migrations
+    let migrations_dir = data_dir.join("migrations");
+
+    match action {
+        MigrateAction::Create { name } => {
+            // Ensure migrations directory exists
+            if !migrations_dir.exists() {
+                fs::create_dir_all(&migrations_dir).map_err(|e| {
+                    CliError::config_error(format!(
+                        "Failed to create migrations directory: {}",
+                        e
+                    ))
+                })?;
+            }
+
+            // Create generator and generate new migration
+            let generator = MigrationGenerator::new(migrations_dir.clone());
+            let file_path = generator.create(&name).map_err(|e| {
+                CliError::config_error(format!("Failed to create migration: {}", e))
+            })?;
+
+            // Extract version and name from filename (e.g., "001_create_users.yaml")
+            let filename = file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+            let (version_str, migration_name) = filename.split_once('_')
+                .unwrap_or(("0", filename));
+            let version: u64 = version_str.parse().unwrap_or(0);
+
+            write_response(json!({
+                "created": true,
+                "version": version,
+                "name": migration_name,
+                "file": file_path.to_string_lossy().to_string(),
+            }))?;
+        }
+
+        MigrateAction::Up => {
+            // Check if initialized
+            if !is_initialized(data_dir) {
+                return Err(CliError::not_initialized());
+            }
+
+            // Ensure migrations directory exists
+            if !migrations_dir.exists() {
+                return Err(CliError::config_error(
+                    "No migrations directory found. Run 'aerodb migrate create' first.",
+                ));
+            }
+
+            // Create executor (in-memory for now, will integrate with real DB later)
+            let executor = Arc::new(InMemoryExecutor::new());
+
+            // Create runner
+            let runner =
+                MigrationRunner::new(migrations_dir.clone(), data_dir.to_path_buf(), executor)
+                    .map_err(|e| {
+                        CliError::boot_failed(format!("Failed to initialize migration runner: {}", e))
+                    })?;
+
+            // Apply pending migrations
+            let report = runner.migrate_up().map_err(|e| {
+                CliError::boot_failed(format!("Migration failed: {}", e))
+            })?;
+
+            if let Some(failed) = report.failed {
+                write_error(
+                    "MIGRATION_FAILED",
+                    &format!(
+                        "Migration {} (v{}) failed: {}",
+                        failed.name, failed.version, failed.error
+                    ),
+                )?;
+            } else {
+                let applied: Vec<_> = report
+                    .applied
+                    .iter()
+                    .map(|m| {
+                        json!({
+                            "version": m.version,
+                            "name": m.name,
+                            "duration_ms": m.duration_ms
+                        })
+                    })
+                    .collect();
+
+                write_response(json!({
+                    "success": true,
+                    "applied_count": applied.len(),
+                    "applied": applied,
+                }))?;
+            }
+        }
+
+        MigrateAction::Down => {
+            // Check if initialized
+            if !is_initialized(data_dir) {
+                return Err(CliError::not_initialized());
+            }
+
+            // Ensure migrations directory exists
+            if !migrations_dir.exists() {
+                return Err(CliError::config_error(
+                    "No migrations directory found.",
+                ));
+            }
+
+            // Create executor
+            let executor = Arc::new(InMemoryExecutor::new());
+
+            // Create runner
+            let runner =
+                MigrationRunner::new(migrations_dir.clone(), data_dir.to_path_buf(), executor)
+                    .map_err(|e| {
+                        CliError::boot_failed(format!("Failed to initialize migration runner: {}", e))
+                    })?;
+
+            // Rollback last migration
+            let result = runner.migrate_down().map_err(|e| {
+                CliError::boot_failed(format!("Rollback failed: {}", e))
+            })?;
+
+            match result {
+                Some(rolled_back) => {
+                    write_response(json!({
+                        "success": true,
+                        "rolled_back": {
+                            "version": rolled_back.version,
+                            "name": rolled_back.name,
+                            "duration_ms": rolled_back.duration_ms
+                        }
+                    }))?;
+                }
+                None => {
+                    write_response(json!({
+                        "success": true,
+                        "message": "No migrations to rollback"
+                    }))?;
+                }
+            }
+        }
+
+        MigrateAction::Status => {
+            // Check if initialized
+            if !is_initialized(data_dir) {
+                return Err(CliError::not_initialized());
+            }
+
+            // Check if migrations directory exists
+            if !migrations_dir.exists() {
+                write_response(json!({
+                    "current_version": 0,
+                    "total_migrations": 0,
+                    "applied_count": 0,
+                    "pending_count": 0,
+                    "pending": []
+                }))?;
+                return Ok(());
+            }
+
+            // Create executor
+            let executor = Arc::new(InMemoryExecutor::new());
+
+            // Create runner
+            let runner =
+                MigrationRunner::new(migrations_dir.clone(), data_dir.to_path_buf(), executor)
+                    .map_err(|e| {
+                        CliError::boot_failed(format!("Failed to initialize migration runner: {}", e))
+                    })?;
+
+            // Get status
+            let status = runner.status().map_err(|e| {
+                CliError::boot_failed(format!("Failed to get migration status: {}", e))
+            })?;
+
+            let pending: Vec<_> = status
+                .pending
+                .iter()
+                .map(|m| {
+                    json!({
+                        "version": m.version,
+                        "name": m.name
+                    })
+                })
+                .collect();
+
+            write_response(json!({
+                "current_version": status.current_version,
+                "total_migrations": status.total_migrations,
+                "applied_count": status.applied_count,
+                "pending_count": status.pending_count,
+                "pending": pending
+            }))?;
         }
     }
 

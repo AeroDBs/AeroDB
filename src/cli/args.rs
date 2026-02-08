@@ -81,6 +81,19 @@ pub enum Command {
         #[command(subcommand)]
         action: ControlAction,
     },
+
+    /// Database migration commands (Phase 14)
+    ///
+    /// Manage database schema migrations with deterministic,
+    /// checksummed, reversible migrations.
+    Migrate {
+        /// Path to configuration file
+        #[arg(long, default_value = "./aerodb.json")]
+        config: PathBuf,
+
+        #[command(subcommand)]
+        action: MigrateAction,
+    },
 }
 
 /// Control plane actions.
@@ -195,6 +208,28 @@ pub enum DiagTarget {
 
     /// Inspect snapshots and checkpoints
     Snapshots,
+}
+
+/// Migration actions (Phase 14).
+///
+/// Per manifesto: deterministic, checksummed, reversible migrations.
+#[derive(Subcommand, Debug)]
+pub enum MigrateAction {
+    /// Create a new migration file
+    Create {
+        /// Name for the migration (will be sanitized)
+        #[arg(long)]
+        name: String,
+    },
+
+    /// Apply all pending migrations
+    Up,
+
+    /// Rollback the last applied migration
+    Down,
+
+    /// Show migration status
+    Status,
 }
 
 impl Cli {

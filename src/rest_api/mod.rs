@@ -8,6 +8,7 @@ pub mod errors;
 pub mod filter;
 pub mod generator;
 pub mod handler;
+pub mod openapi_gen;
 pub mod parser;
 pub mod pipeline_handler;
 pub mod response;
@@ -18,7 +19,9 @@ pub use database::DatabaseFacade;
 pub use errors::{RestError, RestResult};
 pub use filter::{FilterExpr, FilterOperator};
 pub use handler::RestHandler;
+pub use openapi_gen::{OpenApiGenerator, RouteInfo, generate_routes};
 pub use parser::QueryParams;
 pub use pipeline_handler::PipelineRestHandler;
 pub use server::RestServer;
 pub use unified_api::{OperationRequest, OperationResponse, UnifiedApiServer};
+
